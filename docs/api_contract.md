@@ -49,7 +49,7 @@ For cacheable endpoints, the server MUST return:
 
 ### Cacheable endpoints
 - `GET /api/v1/synthetic/tasks`
-- `GET /api/v1/report`
+- `GET /api/v1/report` (optional; not required for sprint 1)
 
 ## Endpoints
 
@@ -140,7 +140,7 @@ For cacheable endpoints, the server MUST return:
 - Query params (optional):
 	- `window`: `7d|30d` (default `30d`)
 	- `bucket`: `hour|day` (default `hour`)
-- Cache: yes (heavy compute).
+- Cache: optional (not required for sprint 1; demo focuses on `synthetic/tasks`).
 - Missions schema v1
 	- Minimum fields (required):
 		- `id` (string)
@@ -195,7 +195,9 @@ For cacheable endpoints, the server MUST return:
 	"meta": {"request_id": "req_01H...", "ts": "2026-01-21T12:00:00Z"}
 }
 ```
-- Headers: MUST include `X-Cache`, `X-Compute-Time-ms` (and optional `X-Cache-Key`).
+- Headers:
+	- `X-Compute-Time-ms` recommended.
+	- Cache proof headers only if/when report caching is enabled.
 - Errors:
 	- `INVALID_PARAMS` (400) for invalid `window`/`bucket`.
 	- `INTERNAL` (500).

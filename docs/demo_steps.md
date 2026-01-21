@@ -13,10 +13,8 @@ Goal: show the project works end-to-end and prove caching via headers.
 	- 1st call (expected MISS): `curl -i 'http://localhost:8000/api/v1/synthetic/tasks?n=100000&seed=42'`
 	- 2nd call (expected HIT):  `curl -i 'http://localhost:8000/api/v1/synthetic/tasks?n=100000&seed=42'`
 	- Verify headers: `X-Cache`, `X-Compute-Time-ms` (and optionally `X-Cache-Key`)
-5. Report twice to show cache:
-	- 1st call (expected MISS): `curl -i 'http://localhost:8000/api/v1/report?window=30d&bucket=hour'`
-	- 2nd call (expected HIT):  `curl -i 'http://localhost:8000/api/v1/report?window=30d&bucket=hour'`
-	- Compare `X-Cache` + compute time
+5. Report (display-only in sprint 1):
+	- `curl -i 'http://localhost:8000/api/v1/report?window=30d&bucket=hour'`
 
 ## Server demo (VPS)
 1. Deploy with Docker Compose (same repo). Confirm ports open.
