@@ -7,21 +7,16 @@ Goal: show the project works end-to-end and prove caching via headers.
 	- `docker compose up --build`
 2. Health check:
 	- `curl -i http://localhost:8000/api/v1/health`
-3. Ingest context:
-	- `curl -i -X POST http://localhost:8000/api/v1/context/ingest \
-	  -H 'Content-Type: application/json' \
-	  -d '{"source":"manual","observed_at":"2026-01-21T09:00:00Z","weather":{"city":"Istanbul","temp_c":7,"condition":"rain"}}'`
-4. Generate missions:
-	- `curl -i -X POST http://localhost:8000/api/v1/missions/generate \
-	  -H 'Content-Type: application/json' \
-	  -d '{"date":"2026-01-21","max_missions":8}'`
-5. Read today missions twice to show cache proof headers:
-	- 1st call (expected MISS): `curl -i http://localhost:8000/api/v1/missions/today`
-	- 2nd call (expected HIT): `curl -i http://localhost:8000/api/v1/missions/today`
-	- Verify headers: `X-Cache`, `X-Compute-Time-ms`
-6. Reports (heavy) twice to show cache:
-	- `curl -i 'http://localhost:8000/api/v1/reports/mission-load?window=30d&bucket=hour'`
-	- repeat the same request and compare `X-Cache` + timing
+3. Read current context (if no context exists yet, expect 404 until ingestion is implemented):
+	- `curl -i http://localhost:8000/api/v1/context`
+4. Synthetic tasks twice to show cache proof headers (seed enables caching):
+	- 1st call (expected MISS): `curl -i 'http://localhost:8000/api/v1/synthetic/tasks?n=100000&seed=42'`
+	- 2nd call (expected HIT):  `curl -i 'http://localhost:8000/api/v1/synthetic/tasks?n=100000&seed=42'`
+	- Verify headers: `X-Cache`, `X-Compute-Time-ms` (and optionally `X-Cache-Key`)
+5. Report twice to show cache:
+	- 1st call (expected MISS): `curl -i 'http://localhost:8000/api/v1/report?window=30d&bucket=hour'`
+	- 2nd call (expected HIT):  `curl -i 'http://localhost:8000/api/v1/report?window=30d&bucket=hour'`
+	- Compare `X-Cache` + compute time
 
 ## Server demo (VPS)
 1. Deploy with Docker Compose (same repo). Confirm ports open.
@@ -36,4 +31,4 @@ Goal: show the project works end-to-end and prove caching via headers.
 - Cache proof headers observed on cached endpoints:
   - `X-Cache: MISS` then `X-Cache: HIT` on repeated calls
   - `X-Compute-Time-ms` decreases (typically) on HIT
-- Report endpoint responds for a realistic `window` + `bucket`.
+- `GET /api/v1/report` responds for a realistic `window` + `bucket`.
