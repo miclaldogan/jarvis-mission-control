@@ -141,6 +141,24 @@ For cacheable endpoints, the server MUST return:
 	- `window`: `7d|30d` (default `30d`)
 	- `bucket`: `hour|day` (default `hour`)
 - Cache: yes (heavy compute).
+- Missions schema v1
+	- Minimum fields (required):
+		- `id` (string)
+		- `title` (string)
+		- `priority` (string: `P1|P2|P3|P4`)
+		- `status` (string: `open|done|snoozed`)
+		- `due_at` (string|null, ISO timestamp)
+		- `tags` (string[])
+		- `why` (string)
+		- `actions` (array)
+			- each action: `{ "label": string, "type": "link"|"api", "target": string }`
+	- Optional but recommended:
+		- `evidence` (object)
+			- `sources` (string[]; e.g. `weather|github|news`)
+			- `confidence` (number; 0..1)
+		- `cache` (object)
+			- `generated_at` (string, ISO timestamp)
+			- `seed` (number|null)
 - Success (`200`) example:
 ```json
 {
@@ -152,7 +170,19 @@ For cacheable endpoints, the server MUST return:
 			"weather": {"city": "Istanbul", "temp_c": 7, "condition": "rain"}
 		},
 		"missions": [
-			{"id": "msn_001", "title": "Review top 3 open PRs", "priority": "high", "completed": false}
+			{
+				"id": "msn_001",
+				"title": "Bugün yağmur var: dışarı planını 18:00 sonrası yap",
+				"priority": "P2",
+				"status": "open",
+				"due_at": null,
+				"tags": ["weather", "planning"],
+				"why": "Yağmur 14:00–17:00 arası yoğun görünüyor.",
+				"actions": [
+					{"label": "Hava detayına git", "type": "link", "target": "/ui/context#weather"}
+				],
+				"evidence": {"sources": ["weather"], "confidence": 0.78}
+			}
 		],
 		"metrics": {
 			"window": "30d",

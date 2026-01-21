@@ -32,3 +32,4 @@ Goal: show the project works end-to-end and prove caching via headers.
   - `X-Cache: MISS` then `X-Cache: HIT` on repeated calls
   - `X-Compute-Time-ms` decreases (typically) on HIT
 - `GET /api/v1/report` responds for a realistic `window` + `bucket`.
+- Report response includes missions list fields: `title`, `priority`, `why`.
