@@ -104,5 +104,8 @@ Example file: `backend/.env.example`
 - Merge to `main` only for stable milestones.
 
 ## Troubleshooting
-- If `docker compose` is missing: install the Docker Compose plugin (`docker-compose-plugin`) or use the manual run steps above.
+- If `docker compose` is missing:
+	- On Mint/Ubuntu, `sudo apt install -y docker-compose-v2` typically provides it.
+	- Some setups use `docker-compose-plugin` or legacy `docker-compose`.
+	- Or use the manual run steps above.
 - If backend can’t reach Redis in manual mode: ensure `REDIS_URL=redis://localhost:6379/0`.
