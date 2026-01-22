@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import logging
+import time
 import uuid
 
 from fastapi import FastAPI, Request
@@ -18,42 +21,68 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="jarvis-mission-control", version=settings.app_version)
 
+    logger = logging.getLogger("jarvis")
+
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
-        request.state.request_id = f"req_{uuid.uuid4().hex}"
-        response = await call_next(request)
+        start = time.perf_counter()
+
+        incoming_request_id = request.headers.get("X-Request-Id")
+        request_id = incoming_request_id.strip() if incoming_request_id else ""
+        if not request_id:
+            request_id = f"req_{uuid.uuid4().hex}"
+
+        request.state.request_id = request_id
+
+        try:
+            response = await call_next(request)
+        except RequestValidationError as exc:
+            payload, status = err(
+                request,
+                code="INVALID_PARAMS",
+                message="Invalid request parameters",
+                status_code=400,
+                details={"errors": exc.errors()},
+            )
+            response = JSONResponse(payload, status_code=status)
+        except HTTPException as exc:
+            payload, status = err(
+                request,
+                code="HTTP_ERROR",
+                message=str(exc.detail),
+                status_code=exc.status_code,
+            )
+            response = JSONResponse(payload, status_code=status)
+        except Exception:
+            payload, status = err(
+                request,
+                code="INTERNAL",
+                message="Unexpected server error",
+                status_code=500,
+            )
+            response = JSONResponse(payload, status_code=status)
+
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        response.headers["X-Request-Id"] = request_id
+
+        logger.info(
+            json.dumps(
+                {
+                    "event": "request",
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status": getattr(response, "status_code", None),
+                    "duration_ms": duration_ms,
+                }
+            )
+        )
+
         return response
 
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        payload, status = err(
-            request,
-            code="INVALID_PARAMS",
-            message="Invalid request parameters",
-            status_code=400,
-            details={"errors": exc.errors()},
-        )
-        return JSONResponse(payload, status_code=status)
-
-    @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException):
-        payload, status = err(
-            request,
-            code="HTTP_ERROR",
-            message=str(exc.detail),
-            status_code=exc.status_code,
-        )
-        return JSONResponse(payload, status_code=status)
-
-    @app.exception_handler(Exception)
-    async def unhandled_exception_handler(request: Request, exc: Exception):
-        payload, status = err(
-            request,
-            code="INTERNAL",
-            message="Unexpected server error",
-            status_code=500,
-        )
-        return JSONResponse(payload, status_code=status)
+    # NOTE: We intentionally handle exceptions in middleware so that:
+    # - every response includes X-Request-Id
+    # - error responses keep the standard envelope
 
     @app.on_event("startup")
     async def _startup():

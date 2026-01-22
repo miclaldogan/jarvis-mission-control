@@ -7,6 +7,11 @@ echo "== Health =="
 curl -is "$API_BASE_URL/api/v1/health" | sed -n '1,25p'
 
 echo
+echo "== Request ID example (from /health) =="
+curl -is "$API_BASE_URL/api/v1/health" \
+	| awk 'BEGIN{IGNORECASE=1} /^x-request-id:/{gsub("\r","",$0); print; exit}'
+
+echo
 echo "== Synthetic (MISS) n=100000 seed=42 =="
 curl -is "$API_BASE_URL/api/v1/synthetic/tasks?n=100000&seed=42" \
 	| awk 'BEGIN{IGNORECASE=1} /^x-cache:|^x-cache-key:|^x-compute-time-ms:/{print} /^\{/{print; exit}'
