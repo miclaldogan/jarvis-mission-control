@@ -11,12 +11,17 @@ Jarvis Mission Control ingests “context” signals (weather/news/github/etc.),
 - **Infra (Nginx + SSL)**: reverse proxy to backend/frontend; HTTPS via Let’s Encrypt on VPS.
 
 ## Data flow
-1. **Context ingestion**: client sends normalized context to `POST /api/v1/context/ingest`.
-2. **Mission generation**: `POST /api/v1/missions/generate` produces missions from the latest context snapshot.
-3. **Daily missions**: `GET /api/v1/missions/today` serves today’s list (often cached).
-4. **Completion**: `POST /api/v1/missions/complete/{id}` marks a mission done.
-5. **Reports**: `GET /api/v1/reports/mission-load` returns load metrics aggregated by `bucket` over `window` (heavy → cached).
-6. **Synthetic load**: `POST /api/v1/synthetic/tasks` can generate large task sets for performance demos (may be cached when `seed` is provided).
+1. **Context ingestion**: `GET /api/v1/context` fetches live context from external sources (weather, github, news).
+2. **Mission generation**: `POST /api/v1/missions/generate` produces missions from context with explainable "why".
+3. **Reports**: `GET /api/v1/reports/mission-load` returns load metrics aggregated by `bucket` over `window` (heavy → cached).
+4. **Synthetic load**: `GET /api/v1/synthetic/tasks` generates large task sets for performance demos (cached when `seed` is provided).
+5. **Demo report**: `GET /api/v1/report` returns combined context + missions + metrics for demo purposes.
+
+### Not yet implemented (future)
+- `POST /api/v1/context/ingest` (manual context push; currently auto-fetched)
+- `GET /api/v1/missions/today` (daily mission list)
+- `POST /api/v1/missions/complete/{id}` (mark mission done)
+- Database persistence (currently in-memory/Redis only)
 
 ## Cache proof
 Endpoints that can be cached MUST return:

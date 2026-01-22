@@ -5,15 +5,16 @@ Built for a 4-person team workflow (issues/PR/review discipline).
 Target architecture: FastAPI backend + Redis cache + responsive frontend.
 Deploy target: Docker Compose behind Nginx + optional SSL.
 
-## What exists today (Sprint 1 scope)
+## What exists today (Sprint 2 scope)
 - Backend (FastAPI) with a stable response envelope (`ok/data/meta/error`).
-- `GET /api/v1/health` working.
-- `GET /api/v1/synthetic/tasks` supports `n=100000|1000000` and optional `seed`.
-	- Caching is **enabled only when `seed` is provided**.
-	- Payload stays small: returns `sample` + `preview_hash` + `meta.total` (not 100k/1M items).
-	- Cache proof headers: `X-Cache`, `X-Compute-Time-ms` (and `X-Cache-Key` as extra proof).
-	- Rate limited (returns 429 with standard error envelope + `Retry-After`).
-- `GET /api/v1/report` exists as a demo-friendly placeholder (not cached in sprint 1).
+- `GET /api/v1/health` → liveness + version.
+- `GET /api/v1/context` → aggregated context snapshot (weather, github, news) with cache proof headers.
+- `GET /api/v1/synthetic/tasks` → cache proof endpoint (`seed` enables caching).
+- `POST /api/v1/missions/generate` → mission generation from context.
+- `GET /api/v1/reports/mission-load` → cached heavy-compute report.
+- `GET /api/v1/report` → demo-friendly report with context + missions.
+- Rate limiting on synthetic (429 with `Retry-After`).
+- Cache proof headers: `X-Cache`, `X-Compute-Time-ms`, `X-Cache-Key`.
 
 ## Team workflow rules
 - No direct pushes to `main` (release/stable). PR required.
@@ -94,10 +95,33 @@ curl -s http://localhost:8000/metrics | grep -E 'cache_hits_total|cache_misses_t
 ## API quick reference
 All endpoints are under `/api/v1` and use the same response envelope.
 
-- `GET /health` → liveness + version
-- `GET /context` → placeholder (404 until ingestion implemented)
-- `GET /synthetic/tasks?n=100000|1000000&seed=42` → cache proof endpoint (seed enables caching)
-- `GET /report?window=30d&bucket=hour` → demo-friendly report response
+| Endpoint | Method | Description | Cache |
+|----------|--------|-------------|-------|
+| `/health` | GET | Liveness + version | No |
+| `/context` | GET | Aggregated context (weather/github/news) | Yes (short TTL) |
+| `/synthetic/tasks` | GET | Cache proof endpoint (`?n=100000&seed=42`) | Yes (when seed provided) |
+| `/missions/generate` | POST | Generate missions from context | No |
+| `/reports/mission-load` | GET | Heavy-compute report (`?window=7d&bucket=day&seed=42`) | Yes (when seed provided) |
+| `/report` | GET | Demo-friendly report with context + missions | No |
+
+### curl examples
+
+```bash
+# Health check
+curl -s http://localhost:8000/api/v1/health | jq .
+
+# Context snapshot
+curl -s http://localhost:8000/api/v1/context | jq '.data | keys'
+
+# Synthetic tasks (cache proof)
+curl -sD - http://localhost:8000/api/v1/synthetic/tasks?n=100000\&seed=42 -o /dev/null | grep -i x-cache
+
+# Mission-load report (cache proof)
+curl -sD - 'http://localhost:8000/api/v1/reports/mission-load?window=7d&bucket=day&seed=42' -o /dev/null | grep -i x-cache
+
+# Prometheus metrics
+curl -s http://localhost:8000/metrics | grep cache_hits
+```
 
 ## Configuration
 Backend environment variables:
@@ -144,30 +168,4 @@ Example file: `backend/.env.example`
 	- Or use the manual run steps above.
 - If backend can’t reach Redis in manual mode: ensure `REDIS_URL=redis://localhost:6379/0`.
 
-## Context API
 
-GET /api/v1/context
-
-Returns aggregated context snapshot.
-
-### Example Response
-```json
-{
-  "ok": true,
-  "data": {
-    "fetched_at": "...",
-    "weather": {
-      "city": "Istanbul",
-      "temp_c": 6.7,
-      "condition": "rain"
-    },
-    "github": {
-      "owner": "miclaldogan",
-      "repo": "jarvis-mission-control",
-      "open_issues": 23,
-      "open_prs": 0
-    },
-    "sources_ok": ["weather", "github"],
-    "sources_failed": []
-  }
-}
