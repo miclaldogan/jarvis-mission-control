@@ -1,42 +1,70 @@
 ﻿from __future__ import annotations
 
+import os
+import time
+
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 
 from app.http_envelope import err, ok
 from app.services.context import build_context_snapshot
-from app.cache import cache_get, cache_set
-
+from app.cache import get_json, set_json  # in-memory cache (works without redis)
 
 router = APIRouter()
 
 
 @router.get("/context")
-async def get_context(request: Request, debug: bool = Query(False)):
+async def get_context(
+    request: Request,
+    debug: bool = Query(False),
+    refresh: bool = Query(False),
+):
     """
     Return latest aggregated context snapshot.
+
+    Cache:
+      - Short TTL cache for GET /api/v1/context
+      - Cache key varies by debug flag
+      - refresh=true bypasses cache
 
     Partial success:
       - If one source fails but another succeeds -> 200 with failed list.
       - If all sources fail -> 502.
-
-    Cache:
-      - Short TTL cache for non-debug requests.
     """
-    cache_key = "context:v1"
+    start = time.perf_counter()
 
-    # 1) Cache READ (only when debug is false)
-    if not debug:
-        cached = cache_get(cache_key)
+    ttl_seconds = int(os.getenv("CACHE_TTL_SECONDS", "120"))
+    cache_key = f"context:v1:debug={int(debug)}"
+
+    def _headers(x_cache: str, compute_ms: int) -> dict[str, str]:
+        return {
+            "X-Cache": x_cache,
+            "X-Compute-Time-ms": str(compute_ms),
+            "X-Cache-Key": cache_key,
+            "Cache-Control": f"public, max-age={ttl_seconds}",
+        }
+
+    # 1) Try cache unless refresh
+    if not refresh:
+        cached = get_json(cache_key)
         if cached is not None:
-            cached["cache"] = "HIT"
-            return JSONResponse(ok(request, cached), status_code=200)
+            compute_ms = int((time.perf_counter() - start) * 1000)
 
-    # 2) Build fresh snapshot
+            # cached objeyi mutate etmeyelim; response için kopya üretelim
+            data = dict(cached)
+            data["cache"] = "HIT"
+
+            return JSONResponse(
+                ok(request, data),
+                status_code=200,
+                headers=_headers("HIT", compute_ms),
+            )
+
+    # 2) Build snapshot (cache MISS)
     data = await build_context_snapshot(debug=debug)
 
-    # 3) All failed -> 502 (do NOT cache failures)
     if len(data.get("sources_ok") or []) == 0:
+        compute_ms = int((time.perf_counter() - start) * 1000)
         payload, status = err(
             request,
             code="UPSTREAM_FAILED",
@@ -47,15 +75,20 @@ async def get_context(request: Request, debug: bool = Query(False)):
                 "sources_skipped": data.get("sources_skipped"),
             },
         )
-        return JSONResponse(payload, status_code=status)
+        return JSONResponse(
+            payload,
+            status_code=status,
+            headers=_headers("MISS", compute_ms),
+        )
 
-    # 4) Cache WRITE (only when debug is false)
-    if not debug:
-        data_to_cache = dict(data)  # shallow copy
-        data_to_cache.pop("cache", None)  # just in case
-        cache_set(cache_key, data_to_cache)
-        data["cache"] = "MISS"
-    else:
-        data["cache"] = "BYPASS"
+    # 3) Save to cache + return
+    compute_ms = int((time.perf_counter() - start) * 1000)
 
-    return JSONResponse(ok(request, data), status_code=200)
+    data["cache"] = "MISS"
+    set_json(cache_key, data)  # TTL env var: CACHE_TTL_SECONDS
+
+    return JSONResponse(
+        ok(request, data),
+        status_code=200,
+        headers=_headers("MISS", compute_ms),
+    )

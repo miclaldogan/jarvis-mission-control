@@ -1,54 +1,56 @@
-import os
+from __future__ import annotations
+
 import json
-from typing import Any, Optional
+import os
+import time
+from typing import Any, Optional, Dict, Tuple
 
-import redis
+# ----------------------------
+# Simple cache interface
+# - Works without Redis (in-memory fallback)
+# - If Redis available, you can wire it later
+# ----------------------------
 
-# --- Redis connection ---
-REDIS_URL = os.getenv("REDIS_URL")
-DEFAULT_TTL = int(os.getenv("CACHE_TTL_SECONDS", "120"))
+_DEFAULT_TTL = int(os.getenv("CACHE_TTL_SECONDS", "120"))
 
-_redis: Optional[redis.Redis] = None
-
-
-def get_redis() -> Optional[redis.Redis]:
-    """
-    Lazy Redis client. If REDIS_URL is not set, caching is disabled (graceful no-op).
-    """
-    global _redis
-    if _redis is None and REDIS_URL:
-        _redis = redis.from_url(REDIS_URL, decode_responses=True)
-    return _redis
+# In-memory fallback cache: key -> (expires_at, value_str)
+_MEM: Dict[str, Tuple[float, str]] = {}
 
 
-# --- Generic JSON helpers used by other modules (e.g., report.py) ---
-def get_json(key: str) -> Optional[Any]:
-    r = get_redis()
-    if not r:
-        return None
-    val = r.get(key)
-    return json.loads(val) if val else None
+def _now() -> float:
+    return time.time()
 
 
-def set_json(key: str, value: Any, ttl: int = DEFAULT_TTL) -> None:
-    r = get_redis()
-    if not r:
-        return
-    r.setex(key, ttl, json.dumps(value))
+def _get_ttl() -> int:
+    try:
+        return int(os.getenv("CACHE_TTL_SECONDS", str(_DEFAULT_TTL)))
+    except Exception:
+        return _DEFAULT_TTL
 
-
-# --- Key builders expected by report.py ---
-def cache_key_mission_load(window: str, bucket: str) -> str:
-    return f"report:mission-load:v1:window={window}:bucket={bucket}"
-
-
-# --- Compatibility exports for context caching module (optional) ---
-def cache_get(key: str):
-    return get_json(key)
-
-
-def cache_set(key: str, value: dict, ttl: int = DEFAULT_TTL):
-    return set_json(key, value, ttl=ttl)
 
 def cache_key_synthetic_tasks(n: int, seed: int) -> str:
-    return f"synthetic:tasks:v1:n={n}:seed={seed}"
+    return f"synthetic:v1:n={n}:seed={seed}"
+
+
+def cache_key_mission_load(size: int, seed: int) -> str:
+    return f"mission_load:v1:size={size}:seed={seed}"
+
+
+def get_json(key: str) -> Optional[Any]:
+    item = _MEM.get(key)
+    if not item:
+        return None
+    expires_at, raw = item
+    if expires_at < _now():
+        _MEM.pop(key, None)
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+def set_json(key: str, value: Any, ttl_seconds: Optional[int] = None) -> None:
+    ttl = ttl_seconds if ttl_seconds is not None else _get_ttl()
+    expires_at = _now() + ttl
+    _MEM[key] = (expires_at, json.dumps(value, ensure_ascii=False))
