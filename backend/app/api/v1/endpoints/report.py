@@ -4,6 +4,7 @@ import time
 from datetime import datetime, timedelta, timezone
 import random
 from typing import Literal
+from typing import Optional
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
@@ -114,7 +115,7 @@ async def mission_load(
     request: Request,
     window: str = Query("30d"),
     bucket: Literal["hour", "day"] = Query("hour"),
-    seed: int | None = Query(None, description="Deterministic seed (enables caching)"),
+    seed: Optional[int] = Query(None, description="Deterministic seed (enables caching)"),
 ):
     if window not in ("7d", "30d"):
         payload, status = err(
