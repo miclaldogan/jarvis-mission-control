@@ -95,6 +95,14 @@ Backend environment variables:
 - `APP_VERSION` (default: `0.1.0`)
 - `REDIS_URL` (default: `redis://redis:6379/0` for Compose)
 - `CACHE_TTL_SECONDS` (default: `120`)
+- `CORS_ALLOWED_ORIGINS` (default: `http://localhost:3000,http://127.0.0.1:3000`)
+- `CORS_ALLOW_CREDENTIALS` (default: `false`)
+
+Backend also sets baseline security headers on responses:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: no-referrer`
+- `Permissions-Policy: geolocation=(), microphone=(), camera=()`
 
 Example file: `backend/.env.example`
 
