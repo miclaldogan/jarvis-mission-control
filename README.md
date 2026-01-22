@@ -109,3 +109,30 @@ Example file: `backend/.env.example`
 	- Some setups use `docker-compose-plugin` or legacy `docker-compose`.
 	- Or use the manual run steps above.
 - If backend can’t reach Redis in manual mode: ensure `REDIS_URL=redis://localhost:6379/0`.
+## Context API
+
+GET /api/v1/context
+
+Returns aggregated context snapshot.
+
+### Example Response
+```json
+{
+  "ok": true,
+  "data": {
+    "fetched_at": "...",
+    "weather": {
+      "city": "Istanbul",
+      "temp_c": 6.7,
+      "condition": "rain"
+    },
+    "github": {
+      "owner": "miclaldogan",
+      "repo": "jarvis-mission-control",
+      "open_issues": 23,
+      "open_prs": 0
+    },
+    "sources_ok": ["weather", "github"],
+    "sources_failed": []
+  }
+}
