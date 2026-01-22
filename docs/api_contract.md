@@ -49,7 +49,8 @@ For cacheable endpoints, the server MUST return:
 
 ### Cacheable endpoints
 - `GET /api/v1/synthetic/tasks`
-- `GET /api/v1/report` (optional; not required for sprint 1)
+- `GET /api/v1/reports/mission-load`
+- `GET /api/v1/report` (optional; demo aggregator)
 
 ## Endpoints
 
@@ -76,6 +77,7 @@ For cacheable endpoints, the server MUST return:
 - Purpose: Return the latest aggregated context snapshot (ingestion output).
 - Query params (optional):
 	- `at`: ISO timestamp (returns snapshot closest to time)
+	- `debug`: boolean (if true, includes raw payloads for troubleshooting)
 - Cache: optional (short TTL ok).
 - Success (`200`) example:
 ```json
@@ -84,17 +86,65 @@ For cacheable endpoints, the server MUST return:
 	"data": {
 		"context_id": "ctx_01H...",
 		"observed_at": "2026-01-21T09:00:00Z",
-		"weather": {"city": "Istanbul", "temp_c": 7, "condition": "rain"},
+		"weather": {"city": "Istanbul", "lat": "41.01", "lon": "28.97", "tz": "Europe/Istanbul", "temp_c": 7, "condition": "rain"},
 		"news": [{"title": "Example headline", "url": "https://example.com"}],
-		"github": {"open_issues": 12, "open_prs": 4},
-		"calendar": {"events_today": 3}
+		"github": {"owner": "miclaldogan", "repo": "jarvis-mission-control", "open_issues": 12, "open_prs": 4},
+		"calendar": {"events_today": 0},
+		"sources_ok": ["weather", "github", "news"],
+		"sources_failed": [{"source": "weather", "error": "..."}],
+		"sources_skipped": [{"source": "github", "reason": "Missing required env vars: GITHUB_OWNER, GITHUB_REPO"}]
 	},
 	"meta": {"request_id": "req_01H...", "ts": "2026-01-21T12:00:00Z"}
 }
 ```
 - Errors:
-	- `NOT_FOUND` (404) if no context exists yet.
-	- `INVALID_PARAMS` (400) for invalid `at`.
+	- `INVALID_PARAMS` (400) for invalid query params.
+	- `UPSTREAM_FAILED` (502) only when **all** sources fail or are skipped.
+
+### POST /api/v1/missions/generate
+- Purpose: Generate a mission/task list from context with explainable “why”.
+- Body:
+	- `context` (optional): object; if omitted, server uses live context ingestion.
+	- `preferences` (optional): `{ energy_level: low|medium|high, time_of_day: morning|afternoon|evening }`
+	- `limit` (optional): int 1..30 (default 15)
+	- `seed` (optional): int; makes output deterministic
+- Cache: optional (not enabled by default).
+- Success (`200`) example:
+```json
+{
+	"ok": true,
+	"data": {
+		"context": {"context_id": "ctx_01H...", "observed_at": "2026-01-21T09:00:00Z"},
+		"missions": [
+			{
+				"id": "msn_001",
+				"title": "PR kuyruğunu temizle (review/merge)",
+				"priority": "P1",
+				"status": "open",
+				"due_at": "2026-01-22T15:00:00Z",
+				"tags": ["github", "delivery"],
+				"why": "Açık PR sayısı 6; review gecikmesi risk oluşturuyor.",
+				"actions": [{"label": "PR listesine git", "type": "link", "target": "https://github.com"}],
+				"evidence": {"sources": ["github"], "confidence": 0.82}
+			}
+		]
+	},
+	"meta": {"request_id": "req_01H...", "ts": "2026-01-21T12:00:00Z"}
+}
+```
+
+### GET /api/v1/reports/mission-load
+- Purpose: Heavy-compute demo report over a time window (used for cache proof).
+- Query params:
+	- `window`: `7d|30d` (default `30d`)
+	- `bucket`: `hour|day` (default `hour`)
+	- `seed` (optional, recommended): deterministic generation; enables caching
+- Cache:
+	- Cache ON if `seed` is provided.
+	- Cache OFF if `seed` missing.
+- Success (`200`) includes:
+	- `data.series[]` each with `{ts, missions_total, missions_completed}`
+- Headers (when cached): `X-Cache`, `X-Compute-Time-ms`, optional `X-Cache-Key`.
 
 ### GET /api/v1/synthetic/tasks
 - Purpose: Generate synthetic tasks for load/performance demos.
