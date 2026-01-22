@@ -12,6 +12,7 @@ Deploy target: Docker Compose behind Nginx + optional SSL.
 	- Caching is **enabled only when `seed` is provided**.
 	- Payload stays small: returns `sample` + `preview_hash` + `meta.total` (not 100k/1M items).
 	- Cache proof headers: `X-Cache`, `X-Compute-Time-ms` (and `X-Cache-Key` as extra proof).
+	- Rate limited (returns 429 with standard error envelope + `Retry-After`).
 - `GET /api/v1/report` exists as a demo-friendly placeholder (not cached in sprint 1).
 
 ## Team workflow rules
@@ -103,8 +104,25 @@ Backend environment variables:
 - `APP_VERSION` (default: `0.1.0`)
 - `REDIS_URL` (default: `redis://redis:6379/0` for Compose)
 - `CACHE_TTL_SECONDS` (default: `120`)
+- `SYNTHETIC_RATELIMIT_PER_MIN` (default: `30`)
+- `SYNTHETIC_RATELIMIT_WINDOW_SECONDS` (default: `60`)
 - `CORS_ALLOWED_ORIGINS` (default: `http://localhost:3000,http://127.0.0.1:3000`)
 - `CORS_ALLOW_CREDENTIALS` (default: `false`)
+
+Quick check (rate limit):
+
+```bash
+export SYNTHETIC_RATELIMIT_PER_MIN=2
+export SYNTHETIC_RATELIMIT_WINDOW_SECONDS=60
+
+for i in 1 2 3; do
+	echo "--- $i"
+	curl -s -D - -o /dev/null \
+		-H 'X-Forwarded-For: 1.2.3.4' \
+		'http://localhost:8000/api/v1/synthetic/tasks?n=100000&seed=42' \
+		| awk 'NR==1{print "status=" $2} /^Retry-After:/{gsub("\r","",$2); print "retry_after=" $2}'
+done
+```
 
 Backend also sets baseline security headers on responses:
 - `X-Content-Type-Options: nosniff`

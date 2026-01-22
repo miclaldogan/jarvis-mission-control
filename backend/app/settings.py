@@ -9,6 +9,8 @@ class Settings:
     app_version: str
     redis_url: str
     cache_ttl_seconds: int
+    synthetic_ratelimit_per_min: int
+    synthetic_ratelimit_window_seconds: int
     cors_allowed_origins: tuple[str, ...]
     cors_allow_credentials: bool
 
@@ -27,6 +29,8 @@ def get_settings() -> Settings:
         app_version=os.getenv("APP_VERSION", "0.1.0"),
         redis_url=os.getenv("REDIS_URL", "redis://redis:6379/0"),
         cache_ttl_seconds=int(os.getenv("CACHE_TTL_SECONDS", "120")),
+        synthetic_ratelimit_per_min=int(os.getenv("SYNTHETIC_RATELIMIT_PER_MIN", "30")),
+        synthetic_ratelimit_window_seconds=int(os.getenv("SYNTHETIC_RATELIMIT_WINDOW_SECONDS", "60")),
         cors_allowed_origins=_parse_csv(
             os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
         ),

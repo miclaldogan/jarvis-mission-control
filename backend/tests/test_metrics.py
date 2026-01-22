@@ -5,6 +5,7 @@ import re
 
 from fastapi.testclient import TestClient
 
+from app.cache import cache_key_synthetic_tasks
 from app.main import create_app
 
 
@@ -35,9 +36,14 @@ def test_metrics_endpoint_exposes_expected_metric_names():
         assert "synthetic_tasks_generated_total" in body
 
 
-def test_cache_hit_miss_counters_increase_with_synthetic_calls():
+def test_cache_hit_miss_counters_increase_with_synthetic_calls(redis_client):
     os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
     app = create_app()
+
+    n = 100000
+    seed = 42
+    cache_key = cache_key_synthetic_tasks(n=n, seed=seed, sample_size=50)
+    redis_client.delete(cache_key)
 
     with TestClient(app) as client:
         before = client.get("/metrics").text
@@ -45,9 +51,9 @@ def test_cache_hit_miss_counters_increase_with_synthetic_calls():
         misses_before = _get_counter_value(before, "cache_misses_total")
 
         # First call should MISS, second should HIT (seed enables caching)
-        r1 = client.get("/api/v1/synthetic/tasks?n=100000&seed=42")
+        r1 = client.get(f"/api/v1/synthetic/tasks?n={n}&seed={seed}")
         assert r1.status_code == 200
-        r2 = client.get("/api/v1/synthetic/tasks?n=100000&seed=42")
+        r2 = client.get(f"/api/v1/synthetic/tasks?n={n}&seed={seed}")
         assert r2.status_code == 200
 
         after = client.get("/metrics").text
