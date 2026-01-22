@@ -27,3 +27,21 @@ def redis_client(redis_url: str) -> Redis:
     except Exception as exc:
         pytest.skip(f"Redis not available at {redis_url}: {exc}")
     return client
+
+
+@pytest.fixture(autouse=True)
+def _clear_rate_limit_keys(redis_url: str):
+    """Keep tests deterministic by clearing Redis-backed rate-limit counters.
+
+    This is best-effort and should not cause skips/failures if Redis is absent.
+    """
+
+    client = Redis.from_url(redis_url, decode_responses=True)
+    try:
+        client.ping()
+    except Exception:
+        return
+
+    keys = client.keys("ratelimit:synthetic:*")
+    if keys:
+        client.delete(*keys)
