@@ -9,6 +9,7 @@ from app.services.ingestion.github import fetch_github
 from app.services.ingestion.news import fetch_news
 from app.services.ingestion.weather import fetch_weather
 from app.services.ingestion.exchange import fetch_exchange_rates
+from app.services.ingestion.trending import fetch_trending
 
 
 def _now_iso() -> str:
@@ -44,6 +45,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
         "github": None,
         "news": [],
         "exchange": None,
+        "trending": [],
         "calendar": {"events_today": 0},
         "sources_ok": [],
         "sources_failed": [],
@@ -127,5 +129,27 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
             data["sources_failed"].append({"source": "exchange", "error": ex.get("error", "unknown")})
     except Exception as e:
         data["sources_failed"].append({"source": "exchange", "error": str(e)})
+
+    # Trending (TMDB API)
+    tmdb_key = os.getenv("TMDB_API_KEY")
+    if not tmdb_key:
+        data["sources_skipped"].append(
+            {
+                "source": "trending",
+                "reason": "Missing required env var: TMDB_API_KEY",
+            }
+        )
+    else:
+        try:
+            trending_result = await fetch_trending(api_key=tmdb_key, limit=5)
+            if trending_result.get("ok"):
+                data["trending"] = trending_result.get("items", [])
+                data["sources_ok"].append("trending")
+            else:
+                data["sources_failed"].append(
+                    {"source": "trending", "error": trending_result.get("error", "unknown")}
+                )
+        except Exception as e:
+            data["sources_failed"].append({"source": "trending", "error": str(e)})
 
     return data
