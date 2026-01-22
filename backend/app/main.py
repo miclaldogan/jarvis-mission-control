@@ -7,6 +7,7 @@ import uuid
 
 from fastapi import FastAPI, Request
 from fastapi import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
@@ -20,6 +21,15 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(title="jarvis-mission-control", version=settings.app_version)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_allowed_origins),
+        allow_credentials=settings.cors_allow_credentials,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+        expose_headers=["X-Request-Id", "X-Cache", "X-Cache-Key", "X-Compute-Time-ms"],
+    )
 
     logger = logging.getLogger("jarvis")
 
@@ -64,6 +74,15 @@ def create_app() -> FastAPI:
 
         duration_ms = int((time.perf_counter() - start) * 1000)
         response.headers["X-Request-Id"] = request_id
+
+        # Basic security headers (baseline)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "geolocation=(), microphone=(), camera=()",
+        )
 
         logger.info(
             json.dumps(
