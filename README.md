@@ -33,8 +33,10 @@ Jarvis Mission Control: Akıllı görev yönetim sistemi
 
 ### ✅ 4. Responsive Arayüz
 - Frontend: React-based responsive UI (teammate: burcuyldrm)
+- **UI Theme:** Jarvis/Iron Man inspired cyberpunk aesthetics (terminal-style, typewriter effects, glow animations)
 - Backend API: Mobile-first tasarım için CORS + cache headers hazır
 - Docker Compose ile backend+frontend+redis orchestration
+- Real-time metrics dashboard with animated charts
 
 ## What exists today (Sprint 2 scope)
 - Backend (FastAPI) with a stable response envelope (`ok/data/meta/error`).
