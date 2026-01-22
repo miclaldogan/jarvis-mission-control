@@ -12,6 +12,8 @@ from redis.asyncio import Redis
 
 from app.cache import cache_key_synthetic_tasks, get_json, set_json
 from app.http_envelope import err, ok
+from app.metrics import inc_cache_hit, inc_cache_miss, inc_synthetic_generated
+from app.rate_limit import fixed_window_allow, synthetic_client_id, synthetic_rate_limit_key
 from app.settings import get_settings
 
 router = APIRouter()
@@ -62,6 +64,33 @@ async def synthetic_tasks(
     settings = get_settings()
     redis: Redis = request.app.state.redis
 
+    limit = settings.synthetic_ratelimit_per_min
+    window_seconds = settings.synthetic_ratelimit_window_seconds
+    if limit > 0 and window_seconds > 0:
+        client_id = synthetic_client_id(
+            x_forwarded_for=request.headers.get("X-Forwarded-For"),
+            client_host=getattr(request.client, "host", None),
+            x_api_key=request.headers.get("X-Api-Key"),
+        )
+        rate_key = synthetic_rate_limit_key(client_id=client_id, window_seconds=window_seconds)
+        allowed, _count, retry_after = await fixed_window_allow(
+            redis=redis,
+            key=rate_key,
+            limit=limit,
+            window_seconds=window_seconds,
+        )
+        if not allowed:
+            payload, status = err(
+                request,
+                code="rate_limited",
+                message="Too many requests",
+                status_code=429,
+                details={"limit": limit, "window_seconds": window_seconds},
+            )
+            response = JSONResponse(payload, status_code=status)
+            response.headers["Retry-After"] = str(retry_after)
+            return response
+
     sample_size = 50
     cache_enabled = seed is not None
     used_seed = seed if seed is not None else random.randint(1, 2**31 - 1)
@@ -74,6 +103,7 @@ async def synthetic_tasks(
         cached = await get_json(redis, cache_key)
 
     if cached is not None:
+        inc_cache_hit()
         data = cached["data"]
         response = JSONResponse(
             ok(request, data, extra_meta={"total": n}),
@@ -83,6 +113,8 @@ async def synthetic_tasks(
         response.headers["X-Cache-Key"] = cache_key
         response.headers["Cache-Control"] = f"public, max-age={settings.cache_ttl_seconds}"
     else:
+        inc_cache_miss()
+        inc_synthetic_generated(n)
         sample = _make_sample(n=n, seed=used_seed, sample_size=sample_size)
         data = {
             "n": n,

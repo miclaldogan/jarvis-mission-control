@@ -12,6 +12,7 @@ Deploy target: Docker Compose behind Nginx + optional SSL.
 	- Caching is **enabled only when `seed` is provided**.
 	- Payload stays small: returns `sample` + `preview_hash` + `meta.total` (not 100k/1M items).
 	- Cache proof headers: `X-Cache`, `X-Compute-Time-ms` (and `X-Cache-Key` as extra proof).
+	- Rate limited (returns 429 with standard error envelope + `Retry-After`).
 - `GET /api/v1/report` exists as a demo-friendly placeholder (not cached in sprint 1).
 
 ## Team workflow rules
@@ -82,6 +83,14 @@ You can also point the script to another base URL:
 API_BASE_URL="http://localhost:8000" bash infra/scripts/demo.sh
 ```
 
+## Metrics (Prometheus)
+The backend exposes `GET /metrics` in Prometheus text format.
+
+```bash
+curl -s http://localhost:8000/metrics | head
+curl -s http://localhost:8000/metrics | grep -E 'cache_hits_total|cache_misses_total'
+```
+
 ## API quick reference
 All endpoints are under `/api/v1` and use the same response envelope.
 
@@ -95,6 +104,31 @@ Backend environment variables:
 - `APP_VERSION` (default: `0.1.0`)
 - `REDIS_URL` (default: `redis://redis:6379/0` for Compose)
 - `CACHE_TTL_SECONDS` (default: `120`)
+- `SYNTHETIC_RATELIMIT_PER_MIN` (default: `30`)
+- `SYNTHETIC_RATELIMIT_WINDOW_SECONDS` (default: `60`)
+- `CORS_ALLOWED_ORIGINS` (default: `http://localhost:3000,http://127.0.0.1:3000`)
+- `CORS_ALLOW_CREDENTIALS` (default: `false`)
+
+Quick check (rate limit):
+
+```bash
+export SYNTHETIC_RATELIMIT_PER_MIN=2
+export SYNTHETIC_RATELIMIT_WINDOW_SECONDS=60
+
+for i in 1 2 3; do
+	echo "--- $i"
+	curl -s -D - -o /dev/null \
+		-H 'X-Forwarded-For: 1.2.3.4' \
+		'http://localhost:8000/api/v1/synthetic/tasks?n=100000&seed=42' \
+		| awk 'NR==1{print "status=" $2} /^Retry-After:/{gsub("\r","",$2); print "retry_after=" $2}'
+done
+```
+
+Backend also sets baseline security headers on responses:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: no-referrer`
+- `Permissions-Policy: geolocation=(), microphone=(), camera=()`
 
 Example file: `backend/.env.example`
 
@@ -109,6 +143,7 @@ Example file: `backend/.env.example`
 	- Some setups use `docker-compose-plugin` or legacy `docker-compose`.
 	- Or use the manual run steps above.
 - If backend can’t reach Redis in manual mode: ensure `REDIS_URL=redis://localhost:6379/0`.
+<<<<<<< HEAD
 ## Context API
 
 GET /api/v1/context
@@ -136,3 +171,6 @@ Returns aggregated context snapshot.
     "sources_failed": []
   }
 }
+=======
+
+>>>>>>> origin/dev
