@@ -1,98 +1,58 @@
 ## Summary
+<!-- Brief description of what this PR does -->
 
 ## Issue link
 - Fixes/Implements: #
 
+## Changes
+<!-- List main changes -->
+- 
+- 
+
 ## Evidence (screenshots / curl output)
-- UI: screenshots
-- API: paste `curl -i ...` output (headers + first JSON line)
+<!-- For API changes: paste `curl -i ...` output showing headers -->
+<!-- For UI changes: screenshots -->
 
 ## How to test
-- Command(s):
-- Expected output:
+```bash
+# Command(s):
 
-## Checklist (author)
-- [ ] Issue linked
-- [ ] Clear description
-- [ ] Tests run (commands listed above)
-- [ ] Breaking change noted (if any)
+# Expected output:
 
-## Review checklist (fast but solid)
+```
 
-### 0) 30-second preflight
+## Checklist
+- [ ] Issue linked above
 - [ ] Base branch is **dev** (not `main`)
-- [ ] Title is clear (e.g., `P1: ...`) and references the issue
-- [ ] Changed files match the scope (backend vs docs vs infra)
-- [ ] PR is not “too big” (too many unrelated changes)
+- [ ] Tests run locally and pass
+- [ ] Docs updated (if API/config changes)
+- [ ] No unrelated changes included
+- [ ] CI checks pass (backend-tests + docker-build)
 
-Quick CLI:
+---
 
-```bash
-export GH_REPO=miclaldogan/jarvis-mission-control
-gh pr view -R "$GH_REPO" <PR_NO> \
-  --json title,baseRefName,headRefName,changedFiles,additions,deletions \
-  --jq '{title,base:.baseRefName,head:.headRefName,changedFiles,additions,deletions}'
-```
+## For Reviewers
 
-### 1) API contract alignment (most important)
-- [ ] Endpoints match docs/api_contract.md exactly
-  - Current v1:
-    - `GET /api/v1/health`
-    - `GET /api/v1/context`
-    - `GET /api/v1/synthetic/tasks`
-    - `GET /api/v1/report`
-- [ ] Response envelope is consistent: `ok/data/meta/error`
-- [ ] Field names match the docs (avoid drift like `temp` vs `temp_c` unless mapped)
-- [ ] If a new endpoint/field is introduced: docs updated (api_contract + demo_steps)
-- [ ] If it’s future work (P2+): clearly labeled as “not in v1”
+### Quick preflight
+- [ ] Base branch is `dev`
+- [ ] Title references the issue (e.g., `feat(backend): add cache #50`)
+- [ ] Changed files match scope (backend/docs/infra)
+- [ ] PR is focused (not too many unrelated changes)
 
-Red flags:
-- [ ] No “v1-looking” endpoints that aren’t in the contract (e.g., `/context/ingest`)
+### API contract alignment
+- [ ] Endpoints match `docs/api_contract.md`
+- [ ] Response envelope: `ok/data/meta/error`
+- [ ] Error codes are uppercase (`RATE_LIMITED`, `INVALID_PARAMS`, etc.)
+- [ ] Cache proof headers present (when applicable): `X-Cache`, `X-Compute-Time-ms`
 
-### 2) Cache proof (synthetic/tasks)
-- [ ] Cache applies only to `GET /api/v1/synthetic/tasks` (for this sprint)
-- [ ] Same params → 2nd call is **HIT**
-- [ ] Headers present:
-  - [ ] `X-Cache: MISS/HIT`
-  - [ ] `X-Compute-Time-ms`
-  - [ ] (optional) `X-Cache-Key`
-- [ ] Different seed → **MISS** again
+### Testing
+- [ ] CI is green (`backend-tests` + `docker-build`)
+- [ ] Local: `docker compose run --rm backend pytest -q` passes
+- [ ] Demo: `bash infra/scripts/demo.sh` still works (if touching cached endpoints)
 
-Quick test:
+### Merge decision
+**Squash merge** when:
+- Single-topic + checks green + API contract aligned + demo safe
 
-```bash
-API=http://127.0.0.1:8000
-curl -is "$API/api/v1/synthetic/tasks?n=100000&seed=42" | sed -n '1,30p'
-curl -is "$API/api/v1/synthetic/tasks?n=100000&seed=42" | sed -n '1,30p'
-curl -is "$API/api/v1/synthetic/tasks?n=100000&seed=43" | sed -n '1,30p'
-```
-
-### 3) CI / tests
-- [ ] PR checks are green:
-  - [ ] `backend-tests`
-  - [ ] `docker-build`
-- [ ] If tests changed/added: `pytest -q` passes locally
-- [ ] Redis config is correct (e.g., `REDIS_URL` expectations match CI/compose)
-
-CLI:
-
-```bash
-export GH_REPO=miclaldogan/jarvis-mission-control
-gh pr checks -R "$GH_REPO" <PR_NO>
-```
-
-### 4) Docker / compose (demo safety)
-- [ ] `docker compose up -d --build` works
-- [ ] `curl /api/v1/health` returns 200
-- [ ] infra/scripts/demo.sh still prints MISS → HIT
-- [ ] If compose changed: no port conflicts; env vars match README (and `.env.example` if added)
-
-### 5) Git hygiene
-- [ ] Only relevant changes are included (no unrelated refactors)
-- [ ] No generated artifacts (logs, caches, venv, __pycache__, etc.)
-- [ ] If refactor is large: rationale is explained and scope is reasonable
-
-### 6) Merge decision
-- Default: **Squash merge** when single-topic + checks green + contract aligned + demo safe
-- Changes requested when: contract drift, demo/cache proof regression, wrong base branch, or CI is red
-
+**Request changes** when:
+- API contract drift, cache proof regression, wrong base branch, or CI is red
