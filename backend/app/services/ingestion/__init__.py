@@ -13,8 +13,10 @@ from .weather import fetch_weather
 from .news import fetch_news
 from .github import fetch_github
 from .exchange import fetch_exchange_rates
+from .trending import fetch_trending
 
 __all__ = [
+    "fetch_trending",
     "fetch_weather",
     "fetch_news",
     "fetch_github",

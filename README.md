@@ -159,6 +159,7 @@ All variables are optional unless stated otherwise.
 |---------|----------|---------|-------------|
 | CACHE_TTL_SECONDS | No | 120 | TTL (in seconds) for short-lived in-memory caches |
 | EXCHANGE_BASE | No | EUR | Base currency for exchange rates (Frankfurter / ECB) |
+| TMDB_API_KEY | No | - | TMDB bearer token (optional). If missing, trending source is skipped |
 
 
 ### Example Response

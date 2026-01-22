@@ -8,7 +8,8 @@ from typing import Any
 from app.services.ingestion.github import fetch_github
 from app.services.ingestion.news import fetch_news
 from app.services.ingestion.weather import fetch_weather
-from app.services.ingestion.exchange import fetch_exchange_rates  # ✅ NEW
+from app.services.ingestion.exchange import fetch_exchange_rates
+from app.services.ingestion.trending import fetch_trending
 
 
 def _now_iso() -> str:
@@ -44,9 +45,8 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
         "github": None,
         "news": [],
         "calendar": {"events_today": 0},
-
-        "exchange": None,  # ✅ NEW normalized field
-
+        "exchange": None,
+        "trending": [],
         "sources_ok": [],
         "sources_failed": [],
         "sources_skipped": [],
@@ -56,10 +56,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
     missing_weather = _missing("WEATHER_LAT", "WEATHER_LON")
     if missing_weather:
         data["sources_skipped"].append(
-            {
-                "source": "weather",
-                "reason": f"Missing required env vars: {', '.join(missing_weather)}",
-            }
+            {"source": "weather", "reason": f"Missing required env vars: {', '.join(missing_weather)}"}
         )
     else:
         try:
@@ -83,10 +80,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
     missing_github = _missing("GITHUB_OWNER", "GITHUB_REPO")
     if missing_github:
         data["sources_skipped"].append(
-            {
-                "source": "github",
-                "reason": f"Missing required env vars: {', '.join(missing_github)}",
-            }
+            {"source": "github", "reason": f"Missing required env vars: {', '.join(missing_github)}"}
         )
     else:
         try:
@@ -111,9 +105,9 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
     except Exception as e:
         data["sources_failed"].append({"source": "news", "error": str(e)})
 
-    # ✅ Exchange rates (Frankfurter/ECB) - no API key
+    # Exchange rates (Frankfurter/ECB) - no API key
     try:
-        base = os.getenv("EXCHANGE_BASE", "EUR")  # optional env, default EUR
+        base = os.getenv("EXCHANGE_BASE", "EUR")
         ex = await fetch_exchange_rates(base=base)
         if ex.get("ok"):
             exchange_obj: dict[str, Any] = {
@@ -129,5 +123,23 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
             data["sources_failed"].append({"source": "exchange", "error": ex.get("error", "unknown")})
     except Exception as e:
         data["sources_failed"].append({"source": "exchange", "error": str(e)})
+
+    # Trending (TMDB) - optional API key
+    tmdb_key = os.getenv("TMDB_API_KEY")
+    if not tmdb_key:
+        data["sources_skipped"].append(
+            {"source": "trending", "reason": "Missing required env vars: TMDB_API_KEY"}
+        )
+        data["trending"] = []
+    else:
+        try:
+            t = await fetch_trending(api_key=tmdb_key, limit=5)
+            if t.get("ok"):
+                data["trending"] = t.get("items", [])
+                data["sources_ok"].append("trending")
+            else:
+                data["sources_failed"].append({"source": "trending", "error": t.get("error", "unknown")})
+        except Exception as e:
+            data["sources_failed"].append({"source": "trending", "error": str(e)})
 
     return data
