@@ -24,6 +24,10 @@ def cache_key_report(*, window: str, bucket: str) -> str:
     return f"cache:v1:report:window={window}:bucket={bucket}"
 
 
+def cache_key_mission_load(*, window: str, bucket: str, seed: int) -> str:
+    return f"cache:v1:mission_load:window={window}:bucket={bucket}:seed={seed}"
+
+
 async def get_json(redis: Redis, key: str) -> Optional[dict[str, Any]]:
     raw = await redis.get(key)
     if raw is None:

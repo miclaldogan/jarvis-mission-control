@@ -2,11 +2,11 @@
 
 ## Overview
 
-The internal `ContextSnapshot` is the normalized data model used by the backend to aggregate contextual information from multiple sources (weather, calendar, news, GitHub). 
+The `ContextSnapshot` is the normalized data model used by the backend to aggregate contextual information from multiple sources (weather, news, GitHub).
 
 The **v1 public API** returns a normalized `Context` object via `GET /api/v1/context` wrapped in the standard [response envelope](api_contract.md#response-envelope-standard).
 
-**Note:** Internal ingestion logic and error tracking (sources_ok, sources_failed) are implementation details. The v1 contract exposes only clean, aggregated fields.
+**Note:** For UI resilience and demo clarity, v1 also exposes source health lists (`sources_ok`, `sources_failed`, `sources_skipped`). Raw upstream payloads are included only when `debug=true`.
 
 ## Context Data Model (Public v1 API)
 
@@ -16,25 +16,18 @@ Exposed via `GET /api/v1/context` in the `data` field of the standard response e
 |-------|------|-------------|
 | `context_id` | string | Unique identifier for this snapshot (e.g., `ctx_01H...`) |
 | `observed_at` | string (ISO 8601, UTC) | Timestamp when data was aggregated; format: `YYYY-MM-DDTHH:mm:ssZ` |
+| `fetched_at` | string (ISO 8601, UTC) | Backward-compatible alias of `observed_at` (planned deprecation) |
 | `weather` | WeatherContext \| null | Current weather conditions, or null if unavailable |
-| `calendar` | object | Calendar summary (e.g., `{events_today: 3}`) |
+| `calendar` | object | Calendar summary (placeholder for now; e.g., `{events_today: 0}`) |
 | `news` | array | List of news articles |
 | `github` | GitHubContext \| null | GitHub repository stats, or null if unavailable |
+| `sources_ok` | array of strings | Names of sources that ingested successfully |
+| `sources_failed` | array of objects | Sources that failed; each has `{source: string, error: string}` |
+| `sources_skipped` | array of objects | Sources skipped due to missing config; each has `{source: string, reason: string}` |
 
-## Internal ContextSnapshot (Backend)
+## Debug payloads
 
-Used internally during ingestion; not exposed directly in v1 API.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `context_id` | string | Unique identifier for this snapshot |
-| `observed_at` | string (ISO 8601, UTC) | Timestamp when data was fetched |
-| `weather` | WeatherContext \| null | Current weather conditions |
-| `calendar` | array | List of calendar events |
-| `news` | array | List of news articles |
-| `github` | GitHubContext \| null | GitHub repository stats |
-| `sources_ok` | array of strings | **[Internal only]** Names of sources that ingested successfully |
-| `sources_failed` | array of objects | **[Internal only]** Sources that failed; each has `{source: string, error: string}` |
+When calling `GET /api/v1/context?debug=true`, the server may attach per-source raw payloads (e.g., `weather.raw`, `github.raw`) for troubleshooting.
 
 ### WeatherContext
 
