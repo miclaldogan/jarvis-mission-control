@@ -35,6 +35,15 @@ labels: [feature]
 - [ ] <!-- Specific implementation task 2 -->
 - [ ] CI green
 
+## Integration Checklist
+<!-- ⚠️ CRITICAL: Check compatibility with existing codebase -->
+- [ ] No conflicts with existing cache layer (we use async Redis, not sync in-memory)
+- [ ] No import path conflicts (check `app/` module structure)
+- [ ] New dependencies added to `requirements.txt` (if any)
+- [ ] Existing tests still pass (`pytest -q` before PR)
+- [ ] Code style matches existing patterns (async/await, type hints, error handling)
+- [ ] Environment variables documented in README (if new ones added)
+
 ## Proof
 <!-- For team workflow: fill after PR is merged -->
 - [ ] PR link
