@@ -130,6 +130,52 @@ curl -s "$API_BASE_URL/api/v1/report?window=30d&bucket=hour" \
 	| sed -n '1,200p'
 
 echo
+echo "== Mission-Load (MISS) window=7d bucket=day seed=42 =="
+# Ensure deterministic MISS: delete only relevant key before first call
+docker compose exec -T redis redis-cli DEL "cache:v1:mission_load:window=7d:bucket=day:seed=42" >/dev/null 2>&1 || true
+
+ML_MISS_HEADERS=$(curl -is "$API_BASE_URL/api/v1/reports/mission-load?window=7d&bucket=day&seed=42" \
+	| awk 'BEGIN{IGNORECASE=1} /^x-cache:|^x-cache-key:|^x-compute-time-ms:/{gsub("\r","",$0); print} /^\{/{exit}')
+echo "$ML_MISS_HEADERS"
+
+if echo "$ML_MISS_HEADERS" | grep -qi '^x-cache: MISS'; then
+	_pass "mission-load cache MISS on first call"
+else
+	_fail "expected mission-load cache MISS on first call"
+fi
+
+ML_MISS_CT=$(echo "$ML_MISS_HEADERS" | awk 'BEGIN{IGNORECASE=1} /^x-compute-time-ms:/{print $2; exit}')
+
+echo
+echo "== Mission-Load (HIT) window=7d bucket=day seed=42 =="
+ML_HIT_HEADERS=$(curl -is "$API_BASE_URL/api/v1/reports/mission-load?window=7d&bucket=day&seed=42" \
+	| awk 'BEGIN{IGNORECASE=1} /^x-cache:|^x-cache-key:|^x-compute-time-ms:/{gsub("\r","",$0); print} /^\{/{exit}')
+echo "$ML_HIT_HEADERS"
+
+if echo "$ML_HIT_HEADERS" | grep -qi '^x-cache: HIT'; then
+	_pass "mission-load cache HIT on second call"
+else
+	_fail "expected mission-load cache HIT on second call"
+fi
+
+ML_HIT_CT=$(echo "$ML_HIT_HEADERS" | awk 'BEGIN{IGNORECASE=1} /^x-compute-time-ms:/{print $2; exit}')
+
+echo
+echo "== Mission-Load compute time comparison (ms) =="
+echo "MISS: ${ML_MISS_CT:-unknown}"
+echo "HIT:  ${ML_HIT_CT:-unknown}"
+
+if [[ -n "${ML_MISS_CT:-}" && -n "${ML_HIT_CT:-}" ]]; then
+	if [[ "$ML_HIT_CT" -le "$ML_MISS_CT" ]]; then
+		_pass "mission-load HIT compute time <= MISS"
+	else
+		_fail "mission-load HIT compute time > MISS"
+	fi
+else
+	_fail "mission-load missing X-Compute-Time-ms"
+fi
+
+echo
 echo "== Metrics snapshot (after demo) =="
 if curl -fsS "$API_BASE_URL/metrics" >/dev/null 2>&1; then
 	curl -s "$API_BASE_URL/metrics" \
