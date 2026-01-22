@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse
 from app.http_envelope import ok, err
 from app.services.ingestion.weather import fetch_weather
 from app.services.ingestion.github import fetch_github
+from app.services.metrics import CONTEXT_REQUESTS_TOTAL, CACHE_MISS_TOTAL
+from app.services.ingestion.news import fetch_news_rss
 
 router = APIRouter()
 
@@ -63,6 +65,42 @@ async def get_context(request: Request):
     if len(sources_ok) == 0:
         payload = err(request, code="BAD_GATEWAY", message="All context sources failed", details={"sources_failed": sources_failed})
         return JSONResponse(payload, status_code=502)
+    # --- NEWS ADD TO DATA (AUTO) ---
+    try:
+        from app import settings as _settings  # fallback if module style
+    except Exception:
+        _settings = None
+
+    try:
+        # prefer already-imported settings object if present
+        feed_url = None
+        limit = 5
+        if "settings" in globals():
+            try:
+                feed_url = getattr(settings, "NEWS_RSS_FEED_URL", None)
+                limit = int(getattr(settings, "NEWS_LIMIT", 5))
+            except Exception:
+                pass
+        if not feed_url and _settings:
+            feed_url = getattr(_settings, "NEWS_RSS_FEED_URL", None)
+            limit = int(getattr(_settings, "NEWS_LIMIT", 5))
+
+        if feed_url:
+            news = fetch_news_rss(feed_url, limit=limit)
+            if "data" in locals() and isinstance(data, dict):
+                data["news"] = news
+                if "sources_ok" in data and isinstance(data["sources_ok"], list) and "news" not in data["sources_ok"]:
+                    data["sources_ok"].append("news")
+            # if your endpoint uses a different container dict, do nothing silently
+    except Exception as e:
+        try:
+            if "data" in locals() and isinstance(data, dict):
+                if "sources_failed" in data and isinstance(data["sources_failed"], list) and "news" not in data["sources_failed"]:
+                    data["sources_failed"].append("news")
+        except Exception:
+            pass
+
 
     payload = ok(request, data)
     return JSONResponse(payload, status_code=200)
+

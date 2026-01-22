@@ -1,3 +1,4 @@
+﻿import os
 from __future__ import annotations
 
 from typing import Optional
@@ -46,4 +47,8 @@ def get_settings() -> Settings:
             print("   - WEATHER_CITY (default: Unknown)")
             print("   - WEATHER_TZ (default: Europe/Istanbul)")
         raise
+
+# --- NEWS SETTINGS (AUTO) ---
+NEWS_RSS_FEED_URL = os.getenv("NEWS_RSS_FEED_URL", "https://feeds.bbci.co.uk/news/world/rss.xml")
+NEWS_LIMIT = int(os.getenv("NEWS_LIMIT", "5"))
 

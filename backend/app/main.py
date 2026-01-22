@@ -11,6 +11,12 @@ from redis.asyncio import Redis
 from app.api.v1.router import api_router
 from app.http_envelope import err
 from app.settings import get_settings
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from fastapi import Response
+...
+@app.get("/api/v1/metrics")
+def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 def create_app() -> FastAPI:
