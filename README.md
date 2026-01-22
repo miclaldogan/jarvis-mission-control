@@ -146,6 +146,11 @@ Example file: `backend/.env.example`
 <<<<<<< HEAD
 ## Context API
 
+<<<<<<< HEAD
+=======
+## Context API
+
+>>>>>>> origin/dev
 GET /api/v1/context
 
 Returns aggregated context snapshot.
@@ -171,6 +176,9 @@ Returns aggregated context snapshot.
     "sources_failed": []
   }
 }
+<<<<<<< HEAD
 =======
 
+>>>>>>> origin/dev
+=======
 >>>>>>> origin/dev

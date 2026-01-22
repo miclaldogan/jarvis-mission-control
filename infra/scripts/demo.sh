@@ -66,6 +66,11 @@ fi
 
 echo
 echo "== Synthetic (MISS) n=100000 seed=42 =="
+
+# Ensure deterministic MISS even if Redis container is reused between runs.
+# Key matches app.cache.cache_key_synthetic_tasks(n=100000, seed=42, sample_size=50)
+docker compose exec -T redis redis-cli DEL "cache:v1:synthetic_tasks:n=100000:seed=42:sample=50" >/dev/null 2>&1 || true
+
 MISS_HEADERS=$(curl -is "$API_BASE_URL/api/v1/synthetic/tasks?n=100000&seed=42" \
 	| awk 'BEGIN{IGNORECASE=1} /^x-cache:|^x-cache-key:|^x-compute-time-ms:/{gsub("\r","",$0); print} /^\{/{exit}')
 echo "$MISS_HEADERS"

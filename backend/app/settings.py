@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+<<<<<<< HEAD
 from typing import Optional
 from pydantic_settings import BaseSettings
 
@@ -49,6 +50,10 @@ def get_settings() -> Settings:
         raise
 
 =======
+=======
+import os
+from dataclasses import dataclass
+>>>>>>> origin/dev
 @dataclass(frozen=True)
 class Settings:
     app_version: str

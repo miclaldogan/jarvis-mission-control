@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+<<<<<<< HEAD
 import os
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request
@@ -8,11 +9,22 @@ from fastapi.responses import JSONResponse
 from app.http_envelope import ok, err
 from app.services.ingestion.weather import fetch_weather
 from app.services.ingestion.github import fetch_github
+=======
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import JSONResponse
+
+from app.http_envelope import err, ok
+from app.services.context import build_context_snapshot
+>>>>>>> origin/dev
 
 router = APIRouter()
 
 @router.get("/context")
+<<<<<<< HEAD
 async def get_context(request: Request):
+=======
+async def get_context(request: Request, debug: bool = Query(False)):
+>>>>>>> origin/dev
     """
     Return latest aggregated context snapshot.
 
@@ -20,6 +32,7 @@ async def get_context(request: Request):
       - If one source fails but another succeeds -> 200 with failed list.
       - If all sources fail -> 502.
     """
+<<<<<<< HEAD
     fetched_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     data: dict = {"fetched_at": fetched_at, "weather": None, "github": None}
@@ -66,3 +79,21 @@ async def get_context(request: Request):
 
     payload = ok(request, data)
     return JSONResponse(payload, status_code=200)
+=======
+    data = await build_context_snapshot(debug=debug)
+
+    if len(data.get("sources_ok") or []) == 0:
+        payload, status = err(
+            request,
+            code="UPSTREAM_FAILED",
+            message="All context sources failed",
+            status_code=502,
+            details={
+                "sources_failed": data.get("sources_failed"),
+                "sources_skipped": data.get("sources_skipped"),
+            },
+        )
+        return JSONResponse(payload, status_code=status)
+
+    return JSONResponse(ok(request, data), status_code=200)
+>>>>>>> origin/dev
