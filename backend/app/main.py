@@ -9,11 +9,14 @@ from fastapi import FastAPI, Request
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import Response
 from fastapi.responses import JSONResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from redis.asyncio import Redis
 
 from app.api.v1.router import api_router
 from app.http_envelope import err
+from app.metrics import observe_request
 from app.settings import get_settings
 
 
@@ -72,7 +75,8 @@ def create_app() -> FastAPI:
             )
             response = JSONResponse(payload, status_code=status)
 
-        duration_ms = int((time.perf_counter() - start) * 1000)
+        duration_s = time.perf_counter() - start
+        duration_ms = int(duration_s * 1000)
         response.headers["X-Request-Id"] = request_id
 
         # Basic security headers (baseline)
@@ -97,7 +101,18 @@ def create_app() -> FastAPI:
             )
         )
 
+        observe_request(
+            method=request.method,
+            path=request.url.path,
+            status=int(getattr(response, "status_code", 0) or 0),
+            duration_seconds=duration_s,
+        )
+
         return response
+
+    @app.get("/metrics")
+    async def metrics() -> Response:
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     # NOTE: We intentionally handle exceptions in middleware so that:
     # - every response includes X-Request-Id

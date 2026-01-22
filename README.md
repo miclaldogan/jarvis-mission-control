@@ -82,6 +82,14 @@ You can also point the script to another base URL:
 API_BASE_URL="http://localhost:8000" bash infra/scripts/demo.sh
 ```
 
+## Metrics (Prometheus)
+The backend exposes `GET /metrics` in Prometheus text format.
+
+```bash
+curl -s http://localhost:8000/metrics | head
+curl -s http://localhost:8000/metrics | grep -E 'cache_hits_total|cache_misses_total'
+```
+
 ## API quick reference
 All endpoints are under `/api/v1` and use the same response envelope.
 

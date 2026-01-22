@@ -123,3 +123,14 @@ echo
 echo "== Report (missions preview) =="
 curl -s "$API_BASE_URL/api/v1/report?window=30d&bucket=hour" \
 	| sed -n '1,200p'
+
+echo
+echo "== Metrics snapshot (after demo) =="
+if curl -fsS "$API_BASE_URL/metrics" >/dev/null 2>&1; then
+	curl -s "$API_BASE_URL/metrics" \
+		| grep -E '^(cache_hits_total|cache_misses_total|synthetic_tasks_generated_total)\b' \
+		| sed -n '1,10p'
+	_pass "/metrics reachable"
+else
+	_fail "/metrics not reachable"
+fi

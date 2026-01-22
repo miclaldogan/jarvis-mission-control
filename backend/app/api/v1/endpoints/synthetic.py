@@ -12,6 +12,7 @@ from redis.asyncio import Redis
 
 from app.cache import cache_key_synthetic_tasks, get_json, set_json
 from app.http_envelope import err, ok
+from app.metrics import inc_cache_hit, inc_cache_miss, inc_synthetic_generated
 from app.settings import get_settings
 
 router = APIRouter()
@@ -74,6 +75,7 @@ async def synthetic_tasks(
         cached = await get_json(redis, cache_key)
 
     if cached is not None:
+        inc_cache_hit()
         data = cached["data"]
         response = JSONResponse(
             ok(request, data, extra_meta={"total": n}),
@@ -83,6 +85,8 @@ async def synthetic_tasks(
         response.headers["X-Cache-Key"] = cache_key
         response.headers["Cache-Control"] = f"public, max-age={settings.cache_ttl_seconds}"
     else:
+        inc_cache_miss()
+        inc_synthetic_generated(n)
         sample = _make_sample(n=n, seed=used_seed, sample_size=sample_size)
         data = {
             "n": n,
