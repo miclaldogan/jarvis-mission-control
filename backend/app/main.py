@@ -4,6 +4,7 @@ import json
 import logging
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi import HTTPException
@@ -20,10 +21,26 @@ from app.metrics import observe_request
 from app.settings import get_settings
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup/shutdown events."""
+    settings = get_settings()
+    # Startup
+    app.state.redis = Redis.from_url(settings.redis_url, decode_responses=True)
+    yield
+    # Shutdown
+    redis: Redis = app.state.redis
+    await redis.aclose()
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
 
-    app = FastAPI(title="jarvis-mission-control", version=settings.app_version)
+    app = FastAPI(
+        title="jarvis-mission-control",
+        version=settings.app_version,
+        lifespan=lifespan,
+    )
 
     app.add_middleware(
         CORSMiddleware,
@@ -117,15 +134,6 @@ def create_app() -> FastAPI:
     # NOTE: We intentionally handle exceptions in middleware so that:
     # - every response includes X-Request-Id
     # - error responses keep the standard envelope
-
-    @app.on_event("startup")
-    async def _startup():
-        app.state.redis = Redis.from_url(settings.redis_url, decode_responses=True)
-
-    @app.on_event("shutdown")
-    async def _shutdown():
-        redis: Redis = app.state.redis
-        await redis.aclose()
 
     app.include_router(api_router, prefix="/api/v1")
     return app

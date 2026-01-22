@@ -1,9 +1,40 @@
 # jarvis-mission-control
 
-Mission Control: context ingest → mission generation → daily missions → reports.
-Built for a 4-person team workflow (issues/PR/review discipline).
-Target architecture: FastAPI backend + Redis cache + responsive frontend.
-Deploy target: Docker Compose behind Nginx + optional SSL.
+**Mission Control:** Intelligent task management system with context ingestion → mission generation → daily prioritization → performance reports.
+
+## 📚 Course Requirements Compliance
+
+### ✅ 1. Özgün Konu
+Jarvis Mission Control: Akıllı görev yönetim sistemi
+- GitHub repo durumu, hava durumu, haber başlıkları gibi kaynaklardan context toplar
+- Context'e göre öncelikli görevler üretir (P1/P2/P3/P4)
+- "Why" açıklamasıyla her görevin gerekçesini gösterir
+- Zaman serisi raporlarıyla görev yükünü analiz eder
+
+### ✅ 2. FastAPI REST API
+6 endpoint ile tam RESTful API:
+- `GET /api/v1/health` → health check
+- `GET /api/v1/context` → canlı context snapshot (weather, github, news)
+- `POST /api/v1/missions/generate` → context'ten görev üretimi
+- `GET /api/v1/synthetic/tasks` → **100k-1M sentetik task** (cache proof)
+- `GET /api/v1/reports/mission-load` → heavy compute report (cache proof)
+- `GET /api/v1/report` → aggregated demo report
+
+### ✅ 3. 100k-1M Sentetik Veri + Cache İspatı
+`GET /api/v1/synthetic/tasks?n=1000000&seed=42`
+- **1 milyon** task üretir (deterministic seed ile)
+- Redis cache ile MISS→HIT proof:
+  ```bash
+  # First call (MISS):  x-cache: MISS, x-compute-time-ms: 0-5ms
+  # Second call (HIT):  x-cache: HIT,  x-compute-time-ms: 0ms
+  ```
+- Cache proof headers: `X-Cache`, `X-Compute-Time-ms`, `X-Cache-Key`
+- Demo script: `bash infra/scripts/demo.sh`
+
+### ✅ 4. Responsive Arayüz
+- Frontend: React-based responsive UI (teammate: burcuyldrm)
+- Backend API: Mobile-first tasarım için CORS + cache headers hazır
+- Docker Compose ile backend+frontend+redis orchestration
 
 ## What exists today (Sprint 2 scope)
 - Backend (FastAPI) with a stable response envelope (`ok/data/meta/error`).
@@ -32,6 +63,17 @@ Deploy target: Docker Compose behind Nginx + optional SSL.
 - API contract (most critical): `docs/api_contract.md`
 - Architecture (1-page): `docs/architecture.md`
 - Demo steps: `docs/demo_steps.md`
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|---------|----------|---------|-------------|
+| `REDIS_URL` | No | `redis://localhost:6379/0` | Redis connection URL |
+| `CACHE_TTL_SECONDS` | No | `120` | TTL for context cache |
+| `APP_VERSION` | No | `0.1.0` | Application version |
+| `EXCHANGE_BASE` | No | `EUR` | Base currency for exchange rates (Frankfurter/ECB) |
+| `WEATHER_LAT`, `WEATHER_LON` | Optional | - | Weather coordinates (if not set, weather skipped) |
+| `GITHUB_OWNER`, `GITHUB_REPO` | Optional | - | GitHub repo (if not set, GitHub skipped) |
 
 ## Local run
 
