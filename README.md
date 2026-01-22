@@ -150,6 +150,17 @@ GET /api/v1/context
 
 Returns aggregated context snapshot.
 
+## Environment Variables
+
+The following environment variables are used to configure the backend services.
+All variables are optional unless stated otherwise.
+
+| Variable | Required | Default | Description |
+|---------|----------|---------|-------------|
+| CACHE_TTL_SECONDS | No | 120 | TTL (in seconds) for short-lived in-memory caches |
+| EXCHANGE_BASE | No | EUR | Base currency for exchange rates (Frankfurter / ECB) |
+
+
 ### Example Response
 ```json
 {

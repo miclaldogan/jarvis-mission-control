@@ -8,6 +8,7 @@ from typing import Any
 from app.services.ingestion.github import fetch_github
 from app.services.ingestion.news import fetch_news
 from app.services.ingestion.weather import fetch_weather
+from app.services.ingestion.exchange import fetch_exchange_rates  # ✅ NEW
 
 
 def _now_iso() -> str:
@@ -43,6 +44,9 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
         "github": None,
         "news": [],
         "calendar": {"events_today": 0},
+
+        "exchange": None,  # ✅ NEW normalized field
+
         "sources_ok": [],
         "sources_failed": [],
         "sources_skipped": [],
@@ -106,5 +110,24 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
         data["sources_ok"].append("news")
     except Exception as e:
         data["sources_failed"].append({"source": "news", "error": str(e)})
+
+    # ✅ Exchange rates (Frankfurter/ECB) - no API key
+    try:
+        base = os.getenv("EXCHANGE_BASE", "EUR")  # optional env, default EUR
+        ex = await fetch_exchange_rates(base=base)
+        if ex.get("ok"):
+            exchange_obj: dict[str, Any] = {
+                "base": ex.get("base"),
+                "rates": ex.get("rates"),
+                "observed_at": ex.get("observed_at"),
+            }
+            if debug:
+                exchange_obj["raw"] = ex
+            data["exchange"] = exchange_obj
+            data["sources_ok"].append("exchange")
+        else:
+            data["sources_failed"].append({"source": "exchange", "error": ex.get("error", "unknown")})
+    except Exception as e:
+        data["sources_failed"].append({"source": "exchange", "error": str(e)})
 
     return data
