@@ -46,6 +46,8 @@ For cacheable endpoints, the server MUST return:
 - `X-Compute-Time-ms: <int>`
 - `X-Cache-Key: <string>` (optional but recommended as proof)
 - `Cache-Control: public, max-age=<seconds>` (or `private` if needed)
+- When cache is bypassed (e.g. `refresh=true`), `X-Cache: MISS` MUST be returned.
+
 
 ### Cacheable endpoints
 - `GET /api/v1/synthetic/tasks`
@@ -78,6 +80,7 @@ For cacheable endpoints, the server MUST return:
 - Query params (optional):
 	- `at`: ISO timestamp (returns snapshot closest to time)
 	- `debug`: boolean (if true, includes raw payloads for troubleshooting)
+	- `refresh`: boolean (if true, bypasses cache and forces fresh upstream fetch)
 - Cache: optional (short TTL ok).
 - Success (`200`) example:
 ```json
