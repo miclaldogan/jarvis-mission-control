@@ -31,9 +31,8 @@ jobs:
           pip install -r backend/requirements.txt
 
       - name: Run pytest
-        run: |
-          cd backend
-          pytest -q
+        working-directory: backend
+        run: pytest -q
 
   docker-build:
     runs-on: ubuntu-latest
