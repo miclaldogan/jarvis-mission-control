@@ -39,7 +39,7 @@ def test_synthetic_tasks_rate_limited(redis_client, monkeypatch):
 
         body = r3.json()
         assert body["ok"] is False
-        assert body["error"]["code"] == "rate_limited"
+        assert body["error"]["code"] == "RATE_LIMITED"
         assert body["error"]["details"]["limit"] == 2
         assert body["error"]["details"]["window_seconds"] == 3600
         assert body["meta"]["request_id"] == r3.headers["X-Request-Id"]
