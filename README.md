@@ -143,9 +143,14 @@ Example file: `backend/.env.example`
 	- Some setups use `docker-compose-plugin` or legacy `docker-compose`.
 	- Or use the manual run steps above.
 - If backend can’t reach Redis in manual mode: ensure `REDIS_URL=redis://localhost:6379/0`.
-
+<<<<<<< HEAD
 ## Context API
 
+<<<<<<< HEAD
+=======
+## Context API
+
+>>>>>>> origin/dev
 GET /api/v1/context
 
 Returns aggregated context snapshot.
@@ -171,3 +176,9 @@ Returns aggregated context snapshot.
     "sources_failed": []
   }
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/dev
+=======
+>>>>>>> origin/dev
