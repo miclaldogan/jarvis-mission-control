@@ -19,13 +19,14 @@ router = APIRouter()
 def _context_cache_key(request: Request) -> str:
     # Include *all* query params (incl. debug) in the key.
     # Sort for stability so ordering differences don't cause cache misses.
-    items = sorted(request.query_params.multi_items())
+    # Note: refresh=true is a cache bypass flag and must NOT create a separate cache key.
+    items = sorted([(k, v) for (k, v) in request.query_params.multi_items() if k != "refresh"])
     query = "&".join([f"{k}={v}" for k, v in items])
     return f"cache:v1:context:path={request.url.path}:q={query}"
 
 
 @router.get("/context")
-async def get_context(request: Request, debug: bool = Query(False)):
+async def get_context(request: Request, debug: bool = Query(False), refresh: bool = Query(False)):
     """
     Return latest aggregated context snapshot.
 
@@ -42,17 +43,18 @@ async def get_context(request: Request, debug: bool = Query(False)):
     redis: Redis = request.app.state.redis
     cache_key = _context_cache_key(request)
 
-    cached = await get_json(redis, cache_key)
-    if cached is not None:
-        inc_cache_hit()
-        data = cached.get("data")
-        response = JSONResponse(ok(request, data), status_code=200)
-        response.headers["X-Cache"] = "HIT"
-        response.headers["X-Cache-Key"] = cache_key
-        response.headers["Cache-Control"] = f"public, max-age={settings.cache_ttl_seconds}"
-        compute_ms = int((time.perf_counter() - start) * 1000)
-        response.headers["X-Compute-Time-ms"] = str(compute_ms)
-        return response
+    if not refresh:
+        cached = await get_json(redis, cache_key)
+        if cached is not None:
+            inc_cache_hit()
+            data = cached.get("data")
+            response = JSONResponse(ok(request, data), status_code=200)
+            response.headers["X-Cache"] = "HIT"
+            response.headers["X-Cache-Key"] = cache_key
+            response.headers["Cache-Control"] = f"public, max-age={settings.cache_ttl_seconds}"
+            compute_ms = int((time.perf_counter() - start) * 1000)
+            response.headers["X-Compute-Time-ms"] = str(compute_ms)
+            return response
 
     inc_cache_miss()
 
