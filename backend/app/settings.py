@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-
-
 @dataclass(frozen=True)
 class Settings:
     app_version: str
