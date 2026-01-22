@@ -18,6 +18,8 @@ jobs:
       REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - uses: actions/setup-python@v5
         with:
@@ -38,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Build backend image
         run: docker build -t jarvis-backend ./backend
