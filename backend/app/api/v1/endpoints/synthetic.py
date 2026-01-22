@@ -82,7 +82,7 @@ async def synthetic_tasks(
         if not allowed:
             payload, status = err(
                 request,
-                code="rate_limited",
+                code="RATE_LIMITED",
                 message="Too many requests",
                 status_code=429,
                 details={"limit": limit, "window_seconds": window_seconds},
