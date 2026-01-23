@@ -250,17 +250,6 @@ export default function Lab() {
                    </div>
                  </div>
                ))}
-               
-               {/* Static mock row for comparison */}
-               <div className="flex items-center justify-between p-3 bg-white/5 rounded border border-white/5 opacity-50">
-                 <div>
-                   <div className="text-xs text-muted-foreground uppercase">BASELINE</div>
-                   <div className="font-mono font-bold text-white text-lg">120ms</div>
-                 </div>
-                 <div className="text-muted-foreground">
-                   <span className="text-[10px] border border-current px-1 rounded">REF</span>
-                 </div>
-               </div>
              </div>
           </CyberCard>
 
