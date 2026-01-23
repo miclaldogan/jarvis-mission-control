@@ -4,6 +4,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom cyberpunk scrollbar styles */
+@import './styles/scrollbar.css';
+
 :root {
   /* Sci-fi Palette - Dark Mode Only base */
   --background: 240 20% 5%;       /* Deep space black #0a0a0f */

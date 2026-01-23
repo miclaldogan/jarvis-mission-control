@@ -1,6 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { CyberCard } from "@/components/CyberCard";
 import { useContextItems } from "@/hooks/use-context";
+import { useState, useEffect } from "react";
 import { 
   CloudRain, 
   Github, 
@@ -31,6 +32,17 @@ import {
 
 export default function Context() {
   const { data: context, isLoading } = useContextItems();
+  
+  // City selector state (localStorage persistence)
+  const [selectedCity, setSelectedCity] = useState<string>(() => {
+    return localStorage.getItem('jarvis-selected-city') || 'Istanbul';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('jarvis-selected-city', selectedCity);
+  }, [selectedCity]);
+
+  const cities = ['Istanbul', 'Ankara', 'Izmir', 'Antalya'];
 
   // Mock radar data for system visualization
   const radarData = [
@@ -79,11 +91,23 @@ export default function Context() {
                  </div>
                  <div className="flex items-center gap-2 text-muted-foreground">
                    <Thermometer className="w-4 h-4" />
-                   <span className="text-sm font-mono">City: {context.weather.city}</span>
+                   <span className="text-sm font-mono">Feels like {context.weather.temp_c}°C</span>
                  </div>
                </div>
-               <div className="mt-4 text-xs font-mono text-primary/70 uppercase">
-                 Location: {context.weather.city}
+               {/* City Selector */}
+               <div className="mt-4">
+                 <label className="block text-xs font-mono text-primary/70 uppercase mb-2">Location</label>
+                 <select
+                   value={selectedCity}
+                   onChange={(e) => setSelectedCity(e.target.value)}
+                   className="w-full bg-black/80 border border-primary/50 text-primary font-mono text-sm px-3 py-2 rounded hover:border-primary/80 focus:border-primary focus:outline-none transition-all cursor-pointer"
+                 >
+                   {cities.map(city => (
+                     <option key={city} value={city} className="bg-black text-primary">
+                       ⚡ {city}
+                     </option>
+                   ))}
+                 </select>
                </div>
             </div>
           ) : (
@@ -179,19 +203,21 @@ export default function Context() {
         {/* Exchange + Traffic + Trending */}
         <div className="space-y-6">
           {/* Exchange Rates */}
-          <CyberCard title="EXCHANGE" glowColor="secondary" className="h-[140px]">
+          <CyberCard title="EXCHANGE" glowColor="secondary" className="h-[180px]">
             {context?.exchange ? (
-              <div className="space-y-2">
+              <div className="flex flex-col h-full">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
                   <DollarSign className="w-4 h-4" />
                   <span className="font-mono">Base: {context.exchange.base}</span>
                 </div>
-                {Object.entries(context.exchange.rates).slice(0, 3).map(([currency, rate]) => (
-                  <div key={currency} className="flex justify-between items-center">
-                    <span className="font-mono text-sm text-white">{currency}</span>
-                    <span className="font-mono text-sm text-secondary font-bold">{typeof rate === 'number' ? rate.toFixed(4) : rate}</span>
-                  </div>
-                ))}
+                <div className="overflow-y-auto flex-1 space-y-2 pr-1 scrollbar-thin">
+                  {Object.entries(context.exchange.rates).map(([currency, rate]) => (
+                    <div key={currency} className="flex justify-between items-center">
+                      <span className="font-mono text-sm text-white">{currency}</span>
+                      <span className="font-mono text-sm text-secondary font-bold">{typeof rate === 'number' ? rate.toFixed(4) : rate}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground font-mono text-sm">

@@ -115,7 +115,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
 
     # Exchange rates (Frankfurter/ECB) - no API key required
     try:
-        base = os.getenv("EXCHANGE_BASE", "EUR")
+        base = os.getenv("EXCHANGE_BASE", "TRY")
         ex = await fetch_exchange_rates(base=base)
         if ex.get("ok"):
             exchange_obj: dict[str, Any] = {
