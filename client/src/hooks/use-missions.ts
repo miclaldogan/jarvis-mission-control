@@ -2,14 +2,27 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
+// Type definitions matching backend enums
+type Priority = "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
+type Category = "SYSTEM" | "RECON" | "ENCRYPTION" | "DEFENSE";
+type Status = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+
 interface Mission {
-  id: number;
+  id: string | number;
   title: string;
-  priority: "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
-  category: "SYSTEM" | "RECON" | "ENCRYPTION" | "DEFENSE";
-  status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  priority: Priority;
+  category: Category;
+  status: Status;
   isGlitched?: boolean;
   createdAt?: string;
+  created_at?: string;
+}
+
+interface CreateMissionRequest {
+  title: string;
+  priority: Priority;
+  category: Category;
+  status?: Status;
 }
 
 interface SyntheticTask {
@@ -30,31 +43,54 @@ export function useMissions() {
       const tasks = json.data.sample as SyntheticTask[];
       
       // Transform synthetic tasks to match Mission interface
-      return tasks.map((task, idx) => ({
-        id: task.id,
-        title: task.title,
-        priority: task.priority as any,
-        category: (idx % 4 === 0 ? "SYSTEM" : idx % 4 === 1 ? "RECON" : idx % 4 === 2 ? "ENCRYPTION" : "DEFENSE") as any,
-        status: task.status as any,
-        isGlitched: Math.random() > 0.9,
-        createdAt: new Date().toISOString(),
-      })) as Mission[];
+      return tasks.map((task, idx): Mission => {
+        // Map synthetic priority to valid enum
+        const priorityMap: Record<string, Priority> = {
+          "P1": "CRITICAL",
+          "P2": "HIGH",
+          "P3": "NORMAL",
+          "P4": "LOW"
+        };
+        
+        // Cycle through categories
+        const categories: Category[] = ["SYSTEM", "RECON", "ENCRYPTION", "DEFENSE"];
+        const category = categories[idx % 4];
+        
+        // Map synthetic status to valid enum
+        const statusMap: Record<string, Status> = {
+          "open": "PENDING",
+          "in_progress": "IN_PROGRESS",
+          "done": "COMPLETED",
+          "failed": "FAILED"
+        };
+        
+        return {
+          id: task.id,
+          title: task.title,
+          priority: priorityMap[task.priority] || "NORMAL",
+          category,
+          status: statusMap[task.status] || "PENDING",
+          isGlitched: Math.random() > 0.9,
+          createdAt: new Date().toISOString(),
+        };
+      });
     },
   });
 }
 
-// POST /api/missions - Mock create (not supported by FastAPI yet)
+// POST /api/v1/missions - Create single mission
 export function useCreateMission() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Omit<Mission, "id">) => {
-      // Mock implementation - just add to local cache
-      const newMission: Mission = {
-        ...data,
-        id: Date.now(),
-        createdAt: new Date().toISOString(),
-      };
-      return newMission;
+    mutationFn: async (data: CreateMissionRequest) => {
+      const res = await fetch(`${API_BASE}/api/v1/missions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create mission");
+      const envelope = await res.json();
+      return envelope.data as Mission;
     },
     onSuccess: (newMission) => {
       queryClient.setQueryData(["missions"], (old: Mission[] = []) => [
