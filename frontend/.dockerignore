@@ -1,0 +1,15 @@
+﻿# Allowlist approach for CI docker-build context
+*
+!Dockerfile
+!.dockerignore
+!nginx.conf
+!package.json
+!package-lock.json
+!pnpm-lock.yaml
+!yarn.lock
+!tsconfig.json
+!vite.config.ts
+!tailwind.config.ts
+!postcss.config.js
+!components.json
+!client/**
