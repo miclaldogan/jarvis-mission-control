@@ -47,4 +47,4 @@ jobs:
         run: docker build -t jarvis-backend ./backend
 
       - name: Build frontend image
-        run: docker build -t jarvis-frontend ./frontend
+        run: docker build -t jarvis-frontend -f frontend/Dockerfile .
