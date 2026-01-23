@@ -1,4 +1,4 @@
-# API Contract (v1)
+﻿# API Contract (v1)
 
 ## Base URL & versioning
 - Prefix: `/api/v1`
@@ -103,7 +103,7 @@ For cacheable endpoints, the server MUST return:
 	- `UPSTREAM_FAILED` (502) only when **all** sources fail or are skipped.
 
 ### POST /api/v1/missions/generate
-- Purpose: Generate a mission/task list from context with explainable “why”.
+- Purpose: Generate a mission/task list from context with explainable â€œwhyâ€.
 - Body:
 	- `context` (optional): object; if omitted, server uses live context ingestion.
 	- `preferences` (optional): `{ energy_level: low|medium|high, time_of_day: morning|afternoon|evening }`
@@ -119,12 +119,12 @@ For cacheable endpoints, the server MUST return:
 		"missions": [
 			{
 				"id": "msn_001",
-				"title": "PR kuyruğunu temizle (review/merge)",
+				"title": "PR kuyruÄŸunu temizle (review/merge)",
 				"priority": "P1",
 				"status": "open",
 				"due_at": "2026-01-22T15:00:00Z",
 				"tags": ["github", "delivery"],
-				"why": "Açık PR sayısı 6; review gecikmesi risk oluşturuyor.",
+				"why": "AÃ§Ä±k PR sayÄ±sÄ± 6; review gecikmesi risk oluÅŸturuyor.",
 				"actions": [{"label": "PR listesine git", "type": "link", "target": "https://github.com"}],
 				"evidence": {"sources": ["github"], "confidence": 0.82}
 			}
@@ -184,7 +184,7 @@ For cacheable endpoints, the server MUST return:
 	- `INVALID_PARAMS` (400) for invalid `n`/`seed`.
 
 ### GET /api/v1/report
-- Purpose: Return a single “demo-friendly” report that includes:
+- Purpose: Return a single â€œdemo-friendlyâ€ report that includes:
 	- current context summary
 	- missions list (embedded here for simplicity)
 	- performance/cache metrics
@@ -223,14 +223,14 @@ For cacheable endpoints, the server MUST return:
 		"missions": [
 			{
 				"id": "msn_001",
-				"title": "Bugün yağmur var: dışarı planını 18:00 sonrası yap",
+				"title": "BugÃ¼n yaÄŸmur var: dÄ±ÅŸarÄ± planÄ±nÄ± 18:00 sonrasÄ± yap",
 				"priority": "P2",
 				"status": "open",
 				"due_at": null,
 				"tags": ["weather", "planning"],
-				"why": "Yağmur 14:00–17:00 arası yoğun görünüyor.",
+				"why": "YaÄŸmur 14:00â€“17:00 arasÄ± yoÄŸun gÃ¶rÃ¼nÃ¼yor.",
 				"actions": [
-					{"label": "Hava detayına git", "type": "link", "target": "/ui/context#weather"}
+					{"label": "Hava detayÄ±na git", "type": "link", "target": "/ui/context#weather"}
 				],
 				"evidence": {"sources": ["weather"], "confidence": 0.78}
 			}
@@ -254,8 +254,33 @@ For cacheable endpoints, the server MUST return:
 	- `INTERNAL` (500).
 
 ## Error codes
-- `INVALID_PARAMS` → 400
-- `NOT_FOUND` → 404
-- `RATE_LIMITED` → 429
-- `UPSTREAM_FAILED` → 502
-- `INTERNAL` → 500
+- `INVALID_PARAMS` â†’ 400
+- `NOT_FOUND` â†’ 404
+- `RATE_LIMITED` â†’ 429
+- `UPSTREAM_FAILED` â†’ 502
+- `INTERNAL` â†’ 500
+
+## GET /api/v1/system/vitals
+
+Returns real-time system vitals using \psutil\.
+
+**Response (envelope)**
+\\\json
+{
+  "ok": true,
+  "data": {
+    "cpu": 45.2,
+    "memory": 62.8,
+    "disk": 13.5,
+    "network": 12.3,
+    "network_mb_sent": 1.2,
+    "network_mb_recv": 3.4,
+    "timestamp": "2026-01-23T10:07:32.240651+00:00"
+  },
+  "meta": { "request_id": "req_...", "ts": "..." }
+}
+\\\
+
+Notes:
+- cpu/memory/disk/network are numbers in **0-100**.
+- network is a capped proxy plus raw MB counters (future: real utilization).
