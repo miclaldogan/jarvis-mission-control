@@ -1,0 +1,294 @@
+import { Layout } from "@/components/Layout";
+import { CyberCard } from "@/components/CyberCard";
+import { useContextItems } from "@/hooks/use-context";
+import { 
+  CloudRain, 
+  Github, 
+  Newspaper, 
+  Wind, 
+  Thermometer, 
+  TrendingUp,
+  Navigation,
+  ExternalLink,
+  GitPullRequest,
+  DollarSign,
+  Car
+} from "lucide-react";
+import { 
+  RadarChart, 
+  PolarGrid, 
+  PolarAngleAxis, 
+  PolarRadiusAxis, 
+  Radar, 
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip
+} from "recharts";
+
+export default function Context() {
+  const { data: context, isLoading } = useContextItems();
+
+  // Mock radar data for system visualization
+  const radarData = [
+    { subject: 'CPU', A: 120, fullMark: 150 },
+    { subject: 'RAM', A: 98, fullMark: 150 },
+    { subject: 'DISK', A: 86, fullMark: 150 },
+    { subject: 'NET', A: 99, fullMark: 150 },
+    { subject: 'GPU', A: 85, fullMark: 150 },
+    { subject: 'AI', A: 65, fullMark: 150 },
+  ];
+
+  const areaData = [
+    { name: '00:00', uv: 4000, pv: 2400 },
+    { name: '04:00', uv: 3000, pv: 1398 },
+    { name: '08:00', uv: 2000, pv: 9800 },
+    { name: '12:00', uv: 2780, pv: 3908 },
+    { name: '16:00', uv: 1890, pv: 4800 },
+    { name: '20:00', uv: 2390, pv: 3800 },
+    { name: '23:59', uv: 3490, pv: 4300 },
+  ];
+
+  return (
+    <Layout>
+      <div className="mb-8">
+        <h2 className="text-4xl font-display font-bold text-white tracking-tighter mb-2 text-glow">
+          GLOBAL CONTEXT
+        </h2>
+        <p className="text-primary/60 font-mono text-sm max-w-2xl">
+          Aggregating external data streams for situational awareness. Weather patterns, repository activity, and global news feeds synced.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Weather Card */}
+        <CyberCard title="ENVIRONMENT" glowColor="primary" className="h-64 flex flex-col">
+          {context?.weather ? (
+            <div className="flex-1 flex flex-col justify-between">
+               <div className="flex items-center justify-between">
+                  <div className="text-5xl font-bold text-white">{context.weather.temp_c}°C</div>
+                  <CloudRain className="w-16 h-16 text-primary opacity-80" />
+               </div>
+               <div className="grid grid-cols-2 gap-4 mt-4">
+                 <div className="flex items-center gap-2 text-muted-foreground">
+                   <Wind className="w-4 h-4" />
+                   <span className="text-sm font-mono">{context.weather.condition}</span>
+                 </div>
+                 <div className="flex items-center gap-2 text-muted-foreground">
+                   <Thermometer className="w-4 h-4" />
+                   <span className="text-sm font-mono">City: {context.weather.city}</span>
+                 </div>
+               </div>
+               <div className="mt-4 text-xs font-mono text-primary/70 uppercase">
+                 Location: {context.weather.city}
+               </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground font-mono text-sm">
+              {context?.sources_skipped?.find(s => s.source === 'weather') ? 'SKIPPED' : 'OFFLINE'}
+            </div>
+          )}
+        </CyberCard>
+
+        {/* System Harmonics Radar */}
+        <CyberCard title="SYSTEM HARMONICS" glowColor="secondary" className="h-64">
+          <div className="h-full w-full -mt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="rgba(188,19,254,0.2)" />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(188,19,254,0.7)', fontSize: 10 }} />
+                <PolarRadiusAxis angle={90} domain={[0, 150]} tick={{ fill: 'rgba(188,19,254,0.5)', fontSize: 10 }} />
+                <Radar name="System Load" dataKey="A" stroke="#bc13fe" fill="#bc13fe" fillOpacity={0.3} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </CyberCard>
+
+        {/* GitHub Activity */}
+        <CyberCard title="REPOSITORY" glowColor="accent" className="h-64 flex flex-col">
+          {context?.github ? (
+            <div className="flex-1 flex flex-col justify-between">
+              <div className="flex items-center gap-4">
+                <Github className="w-12 h-12 text-accent opacity-80" />
+                <div>
+                  <div className="font-mono text-white text-lg font-bold">{context.github.owner}/{context.github.repo}</div>
+                  <div className="text-xs text-muted-foreground">Repository Status</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="p-3 bg-white/5 rounded border border-accent/20">
+                  <div className="text-2xl font-bold text-accent">{context.github.open_issues}</div>
+                  <div className="text-xs text-muted-foreground font-mono uppercase">Open Issues</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-accent/20">
+                  <div className="text-2xl font-bold text-accent">{context.github.open_prs}</div>
+                  <div className="text-xs text-muted-foreground font-mono uppercase flex items-center gap-1">
+                    <GitPullRequest className="w-3 h-3" />
+                    Pull Requests
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground font-mono text-sm">
+              {context?.sources_skipped?.find(s => s.source === 'github') ? 'SKIPPED' : 'OFFLINE'}
+            </div>
+          )}
+        </CyberCard>
+      </div>
+
+      {/* News + Exchange + Traffic Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* News Ticker */}
+        <div className="lg:col-span-2">
+          <CyberCard title="INTELLIGENCE FEED" glowColor="primary">
+            <div className="h-[300px] overflow-y-auto space-y-3 pr-2">
+              {context?.news && context.news.length > 0 ? (
+                context.news.map((news, i) => (
+                  <a 
+                    key={i} 
+                    href={news.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="group flex gap-4 p-3 border border-white/5 bg-black/40 rounded hover:border-primary/30 transition-all"
+                  >
+                    <div className="shrink-0 flex flex-col items-center justify-center w-12 h-12 bg-white/5 rounded">
+                      <Newspaper className="w-6 h-6 text-primary group-hover:text-white transition-colors" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-sm group-hover:text-primary transition-colors line-clamp-2">{news.title}</h4>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] font-mono text-primary/50 uppercase">Hacker News</span>
+                        <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-white transition-colors" />
+                      </div>
+                    </div>
+                  </a>
+                ))
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground font-mono text-sm">
+                  NO NEWS AVAILABLE
+                </div>
+              )}
+            </div>
+          </CyberCard>
+        </div>
+
+        {/* Exchange + Traffic + Trending */}
+        <div className="space-y-6">
+          {/* Exchange Rates */}
+          <CyberCard title="EXCHANGE" glowColor="secondary" className="h-[140px]">
+            {context?.exchange ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                  <DollarSign className="w-4 h-4" />
+                  <span className="font-mono">Base: {context.exchange.base}</span>
+                </div>
+                {Object.entries(context.exchange.rates).slice(0, 3).map(([currency, rate]) => (
+                  <div key={currency} className="flex justify-between items-center">
+                    <span className="font-mono text-sm text-white">{currency}</span>
+                    <span className="font-mono text-sm text-secondary font-bold">{typeof rate === 'number' ? rate.toFixed(4) : rate}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground font-mono text-sm">
+                OFFLINE
+              </div>
+            )}
+          </CyberCard>
+
+          {/* Traffic ETA */}
+          {context?.traffic && (
+            <CyberCard title="COMMUTE ETA" glowColor="accent" className="h-[140px]">
+              <div className="flex items-center gap-4">
+                <Car className="w-10 h-10 text-accent opacity-80" />
+                <div>
+                  <div className="text-3xl font-bold text-accent">{context.traffic.eta_minutes} min</div>
+                  <div className="text-xs text-muted-foreground font-mono">Estimated Time</div>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                <Navigation className="w-3 h-3" />
+                <span className="font-mono">Route calculated</span>
+              </div>
+            </CyberCard>
+          )}
+        </div>
+      </div>
+
+      {/* Trending (TMDB) */}
+      {context?.trending && context.trending.length > 0 && (
+        <CyberCard title="TRENDING MEDIA" glowColor="primary" className="mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {context.trending.slice(0, 5).map((item, i) => (
+              <a 
+                key={i} 
+                href={item.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group p-4 bg-white/5 rounded border border-white/10 hover:border-primary/50 transition-all"
+              >
+                <TrendingUp className="w-8 h-8 text-primary mb-2 group-hover:text-white transition-colors" />
+                <div className="text-sm font-mono text-white line-clamp-2">{item.title}</div>
+              </a>
+            ))}
+          </div>
+        </CyberCard>
+      )}
+
+      {/* Network Traffic Chart */}
+      <CyberCard title="NETWORK TRAFFIC ANALYSIS" subtitle="INBOUND / OUTBOUND PACKET VOLUME" glowColor="accent">
+        <div className="h-[300px] w-full mt-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={areaData}>
+              <defs>
+                <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#bc13fe" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#bc13fe" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="name" stroke="rgba(0,243,255,0.5)" style={{ fontSize: 10 }} />
+              <YAxis stroke="rgba(0,243,255,0.5)" style={{ fontSize: 10 }} />
+              <Tooltip
+                contentStyle={{ 
+                  backgroundColor: 'rgba(0,0,0,0.9)', 
+                  border: '1px solid rgba(0,243,255,0.3)',
+                  borderRadius: '4px',
+                  fontSize: '12px'
+                }}
+              />
+              <Area type="monotone" dataKey="uv" stroke="#22c55e" fillOpacity={1} fill="url(#colorUv)" />
+              <Area type="monotone" dataKey="pv" stroke="#bc13fe" fillOpacity={1} fill="url(#colorPv)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </CyberCard>
+
+      {/* Source Status Footer */}
+      {context && (
+        <div className="mt-8 grid grid-cols-3 gap-4 text-xs font-mono">
+          <div className="p-4 bg-accent/10 border border-accent/20 rounded">
+            <div className="text-accent font-bold mb-2">SOURCES ONLINE: {context.sources_ok?.length || 0}</div>
+            <div className="text-muted-foreground">{context.sources_ok?.join(', ') || 'None'}</div>
+          </div>
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded">
+            <div className="text-destructive font-bold mb-2">SOURCES FAILED: {context.sources_failed?.length || 0}</div>
+            <div className="text-muted-foreground">{context.sources_failed?.map(f => f.source).join(', ') || 'None'}</div>
+          </div>
+          <div className="p-4 bg-secondary/10 border border-secondary/20 rounded">
+            <div className="text-secondary font-bold mb-2">SOURCES SKIPPED: {context.sources_skipped?.length || 0}</div>
+            <div className="text-muted-foreground">{context.sources_skipped?.map(s => s.source).join(', ') || 'None'}</div>
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+}
