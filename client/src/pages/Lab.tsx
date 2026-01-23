@@ -187,7 +187,7 @@ export default function Lab() {
                        <div key={i} className="flex items-center justify-between p-2 bg-black/30 rounded border border-white/5">
                          <span className="text-xs text-muted-foreground">Test #{result.requestNumber}</span>
                          <CacheBadge 
-                           status={result.cacheStatus as any} 
+                           status={result.cacheStatus as "HIT" | "MISS" | "BYPASS" | "UNKNOWN"} 
                            computeTime={result.computeTime}
                          />
                        </div>
