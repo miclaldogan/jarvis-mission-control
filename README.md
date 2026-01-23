@@ -81,6 +81,19 @@ Jarvis Mission Control: Akıllı görev yönetim sistemi
 | `TRAFFIC_ORIGIN_LAT`, `TRAFFIC_ORIGIN_LON` | Optional | - | Commute origin coordinates (required only if `TRAFFIC_API_KEY` is set) |
 | `TRAFFIC_DEST_LAT`, `TRAFFIC_DEST_LON` | Optional | - | Commute destination coordinates (required only if `TRAFFIC_API_KEY` is set) |
 
+### Context Sources (env → enables)
+
+If required env vars are missing, the source is reported under `sources_skipped` (not `sources_failed`) and `/api/v1/context` can still return **200** as long as at least one source succeeds.
+
+| Source | Env vars that enable it | Output (in `/api/v1/context`) |
+|---|---|---|
+| `weather` | `WEATHER_LAT`, `WEATHER_LON` (optional) | `weather: { city, lat, lon, tz, temp_c, condition }` |
+| `github` | `GITHUB_OWNER`, `GITHUB_REPO` (optional), `GITHUB_TOKEN` (optional) | `github: { owner, repo, open_issues, open_prs }` |
+| `news` | none | `news: [{ title, url }]` |
+| `exchange` | none (`EXCHANGE_BASE` optional) | `exchange: { base, rates, observed_at }` |
+| `trending` | `TMDB_API_KEY` (optional) | `trending: [...]` |
+| `traffic` | `TRAFFIC_API_KEY` + (`TRAFFIC_ORIGIN_LAT`, `TRAFFIC_ORIGIN_LON`, `TRAFFIC_DEST_LAT`, `TRAFFIC_DEST_LON`) | `traffic: { origin, destination, eta_minutes }` |
+
 ## Local run
 
 ### Option A: Docker Compose (recommended)

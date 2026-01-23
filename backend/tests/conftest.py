@@ -45,3 +45,4 @@ def _clear_rate_limit_keys(redis_url: str):
     keys = client.keys("ratelimit:synthetic:*")
     if keys:
         client.delete(*keys)
+
