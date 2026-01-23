@@ -81,17 +81,17 @@ export default function Context() {
           {context?.weather ? (
             <div className="flex-1 flex flex-col justify-between">
                <div className="flex items-center justify-between">
-                  <div className="text-5xl font-bold text-white">{context.weather.temp_c}°C</div>
+                  <div className="text-5xl font-bold text-white">{context.weather.temp_c ?? '--'}°C</div>
                   <CloudRain className="w-16 h-16 text-primary opacity-80" />
                </div>
                <div className="grid grid-cols-2 gap-4 mt-4">
                  <div className="flex items-center gap-2 text-muted-foreground">
                    <Wind className="w-4 h-4" />
-                   <span className="text-sm font-mono">{context.weather.condition}</span>
+                   <span className="text-sm font-mono">{context.weather.condition ?? 'unknown'}</span>
                  </div>
                  <div className="flex items-center gap-2 text-muted-foreground">
                    <Thermometer className="w-4 h-4" />
-                   <span className="text-sm font-mono">Feels like {context.weather.temp_c}°C</span>
+                   <span className="text-sm font-mono">Feels like {context.weather.temp_c ?? '--'}°C</span>
                  </div>
                </div>
                {/* City Selector */}
@@ -167,8 +167,8 @@ export default function Context() {
       {/* News + Exchange + Traffic Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* News Ticker */}
-        <div className="lg:col-span-2">
-          <CyberCard title="INTELLIGENCE FEED" glowColor="primary">
+        <div className="lg:col-span-2 h-[360px]">
+          <CyberCard title="INTELLIGENCE FEED" glowColor="primary" className="h-full">
             <div className="h-[300px] overflow-y-auto space-y-3 pr-2">
               {context?.news && context.news.length > 0 ? (
                 context.news.map((news, i) => (
@@ -201,16 +201,16 @@ export default function Context() {
         </div>
 
         {/* Exchange + Traffic + Trending */}
-        <div className="space-y-6">
+        <div className="space-y-6 h-[360px] flex flex-col">
           {/* Exchange Rates */}
-          <CyberCard title="EXCHANGE" glowColor="secondary" className="h-[180px]">
+          <CyberCard title="EXCHANGE" glowColor="secondary" className="h-full">
             {context?.exchange ? (
               <div className="flex flex-col h-full">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 flex-shrink-0">
                   <DollarSign className="w-4 h-4" />
                   <span className="font-mono">Base: {context.exchange.base}</span>
                 </div>
-                <div className="overflow-y-auto flex-1 space-y-2 pr-1 scrollbar-thin">
+                <div className="overflow-y-auto flex-1 space-y-2 pr-2 scrollbar-thin max-h-[240px]">
                   {Object.entries(context.exchange.rates).map(([currency, rate]) => (
                     <div key={currency} className="flex justify-between items-center">
                       <span className="font-mono text-sm text-white">{currency}</span>

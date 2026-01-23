@@ -67,11 +67,11 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
         try:
             w = await fetch_weather()
             weather_obj: dict[str, Any] = {
-                "city": os.getenv("WEATHER_CITY", "Unknown"),
+                "city": w.get("city") if isinstance(w, dict) else os.getenv("WEATHER_CITY", "Unknown"),
                 "lat": os.getenv("WEATHER_LAT"),
                 "lon": os.getenv("WEATHER_LON"),
                 "tz": os.getenv("WEATHER_TZ"),
-                "temp_c": w.get("temp") if isinstance(w, dict) else None,
+                "temp_c": w.get("temp_c") if isinstance(w, dict) else None,
                 "condition": w.get("condition") if isinstance(w, dict) else None,
             }
             if debug:
