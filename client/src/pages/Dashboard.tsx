@@ -2,6 +2,7 @@ import { useMissions, useCreateMission } from "@/hooks/use-missions";
 import { useMetrics } from "@/hooks/use-metrics";
 import { CyberCard } from "@/components/CyberCard";
 import { Layout } from "@/components/Layout";
+import { cn } from "@/lib/utils";
 import { 
   AlertCircle, 
   CheckCircle2, 

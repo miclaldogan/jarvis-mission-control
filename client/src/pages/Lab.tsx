@@ -3,6 +3,8 @@ import { CyberCard } from "@/components/CyberCard";
 import { useBulkCreateMissions } from "@/hooks/use-missions";
 import { useMetrics } from "@/hooks/use-metrics";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { 
   Beaker, 
   Cpu, 
@@ -10,7 +12,9 @@ import {
   PlayCircle, 
   BarChart4,
   Terminal,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle2
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +24,7 @@ export default function Lab() {
   const { data: metrics } = useMetrics();
   const [simulationRunning, setSimulationRunning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const { toast } = useToast();
 
   const addLog = (msg: string) => {
     setLogs(prev => [...prev, `[${new Date().toISOString().split('T')[1].split('.')[0]}] ${msg}`].slice(-8));
@@ -38,10 +43,21 @@ export default function Lab() {
           addLog(`SUCCESS: ${data.message}`);
           addLog(`Generated ${data.count} new mission protocols.`);
           setSimulationRunning(false);
+          toast({
+            title: "SIMULATION COMPLETE",
+            description: `Successfully generated ${data.count} tasks.`,
+            className: "bg-black border-accent text-accent",
+          });
         },
         onError: () => {
           addLog("ERROR: Simulation failed due to overload.");
           setSimulationRunning(false);
+          toast({
+            title: "SIMULATION FAILED",
+            description: "System overload detected during task generation.",
+            variant: "destructive",
+            className: "bg-black border-destructive text-destructive",
+          });
         }
       });
     }, 1500);
@@ -49,8 +65,18 @@ export default function Lab() {
 
   const handleRunReport = () => {
     addLog("Compiling performance metrics...");
-    addLog("Analyzing cache hit/miss ratios...");
-    addLog("Report generation complete.");
+    
+    setTimeout(() => {
+        addLog("Analyzing cache hit/miss ratios...");
+        setTimeout(() => {
+            addLog("Report generation complete.");
+            toast({
+                title: "REPORT GENERATED",
+                description: "System diagnostics available in /logs/sys_latest.log",
+                className: "bg-black border-primary text-primary",
+            });
+        }, 800);
+    }, 800);
   };
 
   return (
