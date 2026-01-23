@@ -45,29 +45,4 @@ def _clear_rate_limit_keys(redis_url: str):
     keys = client.keys("ratelimit:synthetic:*")
     if keys:
         client.delete(*keys)
-class DummyAsyncRedis:
-    """Minimal async Redis stub used during tests to avoid network calls."""
-
-    async def get(self, *args, **kwargs):
-        return None
-
-    async def set(self, *args, **kwargs):
-        return True
-
-    async def aclose(self):
-        return None
-
-
-@pytest.fixture(autouse=True)
-def _patch_async_redis_from_url(monkeypatch):
-    """
-    Patch async Redis client creation used by app startup/lifespan:
-    - app.main uses: from redis.asyncio import Redis
-    - then: Redis.from_url(...)
-    Without Redis running, startup can raise and tests get 500 before hitting endpoints.
-    This fixture makes startup deterministic and offline-safe.
-    """
-    import app.main as main_module
-
-    monkeypatch.setattr(main_module.Redis, "from_url", lambda *args, **kwargs: DummyAsyncRedis())
 
