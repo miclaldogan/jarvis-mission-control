@@ -249,6 +249,16 @@ Example file: `backend/.env.example`
   - Traffic ingestion implementation
   - Environment configuration
 
+- **[@reyyannerva](https://github.com/reyyannerva)** - Specifications & Documentation
+  - Mission generation rules (v1 spec)
+  - DB schema draft (tasks/context/reports)
+  - Synthetic tasks generator spec (100k/1M)
+  - Report aggregation spec (bucket/window)
+  - Context schema normalization
+  - Demo documentation & snapshots
+  - 3 merged PRs (#23, #37, #57)
+  - 6 closed issues (#2, #3, #6, #8, #14, #76)
+
 ## Troubleshooting
 - If `docker compose` is missing:
 	- On Mint/Ubuntu, `sudo apt install -y docker-compose-v2` typically provides it.
