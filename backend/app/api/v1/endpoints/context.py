@@ -17,13 +17,12 @@ router = APIRouter()
 
 
 def _context_cache_key(request: Request) -> str:
-    # Include *all* query params (incl. debug) in the key.
-    # Sort for stability so ordering differences don't cause cache misses.
-    # Note: refresh=true is a cache bypass flag and must NOT create a separate cache key.
     items = sorted([(k, v) for (k, v) in request.query_params.multi_items() if k != "refresh"])
-    query = "&".join([f"{k}={v}" for k, v in items])
+    if items:
+        query = "&".join([f"{k}={v}" for k, v in items])
+    else:
+        query = ""
     return f"cache:v1:context:path={request.url.path}:q={query}"
-
 
 @router.get("/context")
 async def get_context(request: Request, debug: bool = Query(False), refresh: bool = Query(False)):

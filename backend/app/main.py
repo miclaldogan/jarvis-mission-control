@@ -23,15 +23,19 @@ from app.settings import get_settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan context manager for startup/shutdown events."""
     settings = get_settings()
-    # Startup
-    app.state.redis = Redis.from_url(settings.redis_url, decode_responses=True)
-    yield
-    # Shutdown
-    redis: Redis = app.state.redis
-    await redis.aclose()
 
+    redis = None
+    try:
+        redis = Redis.from_url(settings.redis_url, decode_responses=True)
+        await redis.ping()
+    except Exception:
+        redis = None
+
+    app.state.redis = redis
+    yield
+    if app.state.redis is not None:
+        await app.state.redis.aclose()
 
 def create_app() -> FastAPI:
     settings = get_settings()
