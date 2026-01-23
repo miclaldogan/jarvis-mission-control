@@ -1,7 +1,9 @@
 import { Layout } from "@/components/Layout";
 import { CyberCard } from "@/components/CyberCard";
+import { CacheBadge } from "@/components/CacheBadge";
 import { useBulkCreateMissions } from "@/hooks/use-missions";
 import { useMetrics } from "@/hooks/use-metrics";
+import { useCacheTest } from "@/hooks/use-cache-test";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -14,7 +16,8 @@ import {
   Terminal,
   RefreshCw,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Database
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function Lab() {
   const bulkCreate = useBulkCreateMissions();
   const { data: metrics } = useMetrics();
+  const cacheTest = useCacheTest();
   const [simulationRunning, setSimulationRunning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const { toast } = useToast();
@@ -79,6 +83,28 @@ export default function Lab() {
     }, 800);
   };
 
+  const handleCacheTest = async () => {
+    addLog("Running cache performance test...");
+    try {
+      const result = await cacheTest.runTest();
+      addLog(`Cache ${result.cacheStatus} - ${result.computeTime}ms compute time`);
+      toast({
+        title: `CACHE ${result.cacheStatus}`,
+        description: `Response time: ${result.computeTime}ms`,
+        className: result.cacheStatus === "HIT" 
+          ? "bg-black border-accent text-accent" 
+          : "bg-black border-destructive text-destructive",
+      });
+    } catch (error) {
+      addLog("ERROR: Cache test failed");
+      toast({
+        title: "TEST FAILED",
+        description: "Unable to complete cache test",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Layout>
       <div className="mb-8">
@@ -130,6 +156,54 @@ export default function Lab() {
                  <Button onClick={handleRunReport} variant="outline" className="w-full border-accent text-accent hover:bg-accent hover:text-black font-bold tracking-wider">
                    RUN SYSTEM REPORT
                  </Button>
+               </div>
+
+               <div className="p-4 bg-white/5 rounded border border-white/10 flex flex-col gap-4">
+                 <div className="flex items-center gap-3 text-primary">
+                   <Database className="w-6 h-6" />
+                   <h4 className="font-bold">CACHE PROOF</h4>
+                 </div>
+                 <p className="text-xs text-muted-foreground">
+                   Test cache performance: first call = MISS (slow), second call = HIT (fast). Demonstrates caching efficiency.
+                 </p>
+                 <Button 
+                   onClick={handleCacheTest} 
+                   disabled={cacheTest.loading}
+                   variant="outline" 
+                   className="w-full border-primary text-primary hover:bg-primary hover:text-black font-bold tracking-wider"
+                 >
+                   {cacheTest.loading ? (
+                     <>
+                       <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                       TESTING...
+                     </>
+                   ) : (
+                     <>RUN CACHE TEST ({cacheTest.requestCount}/20)</>
+                   )}
+                 </Button>
+                 {cacheTest.results.length > 0 && (
+                   <div className="space-y-2 max-h-[120px] overflow-y-auto">
+                     {cacheTest.results.map((result, i) => (
+                       <div key={i} className="flex items-center justify-between p-2 bg-black/30 rounded border border-white/5">
+                         <span className="text-xs text-muted-foreground">Test #{result.requestNumber}</span>
+                         <CacheBadge 
+                           status={result.cacheStatus as any} 
+                           computeTime={result.computeTime}
+                         />
+                       </div>
+                     ))}
+                   </div>
+                 )}
+                 {cacheTest.requestCount > 0 && (
+                   <Button 
+                     onClick={cacheTest.reset} 
+                     variant="ghost" 
+                     size="sm"
+                     className="text-xs text-muted-foreground hover:text-white"
+                   >
+                     Reset Tests
+                   </Button>
+                 )}
                </div>
              </div>
           </CyberCard>

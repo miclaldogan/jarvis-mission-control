@@ -22,9 +22,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertMissionSchema, type InsertMission } from "@shared/schema";
+import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { motion } from "framer-motion";
+
+// Mission schema inline
+const insertMissionSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  priority: z.enum(["CRITICAL", "HIGH", "NORMAL", "LOW"]),
+  category: z.enum(["SYSTEM", "RECON", "ENCRYPTION", "DEFENSE"]),
+  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "FAILED"]).optional(),
+  isGlitched: z.boolean().optional(),
+});
+
+type InsertMission = z.infer<typeof insertMissionSchema>;
 
 export default function Dashboard() {
   const { data: missions, isLoading: loadingMissions } = useMissions();
