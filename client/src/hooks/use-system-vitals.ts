@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
 type EnvelopeOk<T> = {
   ok: true;
@@ -13,59 +12,47 @@ type EnvelopeErr = {
   ok: false;
   data: null;
   meta: { request_id: string; ts: string };
-  error: { code: string; message: string; details?: Record<string, unknown> };
+  error: { code: string; message: string; details: Record<string, unknown> };
 };
 
 type Envelope<T> = EnvelopeOk<T> | EnvelopeErr;
 
-export type SystemVitalsData = {
-  cpu: { percent: number; cores: number };
-  memory: { percent: number; used_gb: number; total_gb: number };
-  network: { bytes_sent: number; bytes_recv: number };
-  disk: { percent: number; used_gb: number; total_gb: number };
-};
-
-export type SystemVitalsUI = {
-  cpu: number;      // percent
-  memory: number;   // percent
-  disk: number;     // percent
-  network: number;  // bytes_recv (UI’de tek sayı isteniyor diye)
+// UI-friendly shape (issue’deki basit interface)
+export interface SystemVitals {
+  cpu: number;
+  memory: number;
+  disk: number;
+  network: number;
   timestamp: string;
-  raw: SystemVitalsData;
-};
+}
 
-function toUI(data: SystemVitalsData, ts: string): SystemVitalsUI {
+function toUiVitals(json: Envelope<any>): SystemVitals {
+  if (!json.ok) {
+    throw new Error(json.error?.message || "Failed to fetch system vitals");
+  }
+
+  const d = json.data;
+
   return {
-    cpu: data.cpu.percent,
-    memory: data.memory.percent,
-    disk: data.disk.percent,
-    network: data.network.bytes_recv,
-    timestamp: ts,
-    raw: data,
+    cpu: Number(d?.cpu?.percent ?? 0),
+    memory: Number(d?.memory?.percent ?? 0),
+    disk: Number(d?.disk?.percent ?? 0),
+    network: Number(d?.network?.bytes_recv ?? 0), // UI tek sayı istiyor: bytes_recv kullandım
+    timestamp: json.meta?.ts ?? new Date().toISOString(),
   };
 }
 
-async function fetchSystemVitals(): Promise<SystemVitalsUI> {
+async function fetchSystemVitals(): Promise<SystemVitals> {
   const res = await fetch(`${API_BASE}/api/v1/system/vitals`);
+  const json = (await res.json()) as Envelope<any>;
 
-  // HTTP error -> throw (react-query isError)
   if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try {
-      const body = (await res.json()) as Envelope<unknown>;
-      if (!body.ok) msg = `${body.error.code}: ${body.error.message}`;
-    } catch {
-      // ignore parse errors
-    }
+    // Backend err envelope dönüyor olabilir
+    const msg = (json as any)?.error?.message || `HTTP ${res.status}`;
     throw new Error(msg);
   }
 
-  const json = (await res.json()) as Envelope<SystemVitalsData>;
-  if (!json.ok) {
-    throw new Error(`${json.error.code}: ${json.error.message}`);
-  }
-
-  return toUI(json.data, json.meta.ts);
+  return toUiVitals(json);
 }
 
 export function useSystemVitals() {
@@ -74,5 +61,6 @@ export function useSystemVitals() {
     queryFn: fetchSystemVitals,
     refetchInterval: 2500,
     staleTime: 2000,
+    retry: 1,
   });
 }
