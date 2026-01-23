@@ -20,23 +20,20 @@ from app.http_envelope import err
 from app.metrics import observe_request
 from app.settings import get_settings
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
 
-    redis = None
-    try:
-        redis = Redis.from_url(settings.redis_url, decode_responses=True)
-        await redis.ping()
-    except Exception:
-        redis = None
+    # Startup: always create Redis client (do not ping here)
+    app.state.redis = Redis.from_url(settings.redis_url, decode_responses=True)
 
-    app.state.redis = redis
     yield
-    if app.state.redis is not None:
-        await app.state.redis.aclose()
 
+    # Shutdown
+    redis = getattr(app.state, "redis", None)
+    if redis is not None:
+        await redis.aclose()
+        
 def create_app() -> FastAPI:
     settings = get_settings()
 

@@ -24,6 +24,7 @@ def _context_cache_key(request: Request) -> str:
         query = ""
     return f"cache:v1:context:path={request.url.path}:q={query}"
 
+
 @router.get("/context")
 async def get_context(request: Request, debug: bool = Query(False), refresh: bool = Query(False)):
     """
