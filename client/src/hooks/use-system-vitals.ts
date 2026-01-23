@@ -34,11 +34,11 @@ function toUiVitals(json: Envelope<any>): SystemVitals {
   const d = json.data;
 
   return {
-    cpu: Number(d?.cpu?.percent ?? 0),
-    memory: Number(d?.memory?.percent ?? 0),
-    disk: Number(d?.disk?.percent ?? 0),
-    network: Number(d?.network?.bytes_recv ?? 0), // UI tek sayı istiyor: bytes_recv kullandım
-    timestamp: json.meta?.ts ?? new Date().toISOString(),
+    cpu: Number(d?.cpu ?? 0),
+    memory: Number(d?.memory ?? 0),
+    disk: Number(d?.disk ?? 0),
+    network: Number(d?.network ?? 0),
+    timestamp: d?.timestamp ?? json.meta?.ts ?? new Date().toISOString(),
   };
 }
 
