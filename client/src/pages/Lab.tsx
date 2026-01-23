@@ -1,4 +1,4 @@
-import { Layout } from "@/components/Layout";
+﻿import { Layout } from "@/components/Layout";
 import { CyberCard } from "@/components/CyberCard";
 import { CacheBadge } from "@/components/CacheBadge";
 import { useBulkCreateMissions } from "@/hooks/use-missions";
@@ -276,3 +276,4 @@ export default function Lab() {
     </Layout>
   );
 }
+
