@@ -70,12 +70,16 @@ Jarvis Mission Control: Akıllı görev yönetim sistemi
 
 | Variable | Required | Default | Description |
 |---------|----------|---------|-------------|
-| `REDIS_URL` | No | `redis://localhost:6379/0` | Redis connection URL |
+| `REDIS_URL` | No | `redis://localhost:6379/0` | Redis connection URL (optional; if Redis is unavailable, cache is bypassed) |
 | `CACHE_TTL_SECONDS` | No | `120` | TTL for context cache |
 | `APP_VERSION` | No | `0.1.0` | Application version |
 | `EXCHANGE_BASE` | No | `EUR` | Base currency for exchange rates (Frankfurter/ECB) |
 | `WEATHER_LAT`, `WEATHER_LON` | Optional | - | Weather coordinates (if not set, weather skipped) |
 | `GITHUB_OWNER`, `GITHUB_REPO` | Optional | - | GitHub repo (if not set, GitHub skipped) |
+| `TMDB_API_KEY` | Optional | - | TMDB API key for `/context.trending` (if not set, trending skipped) |
+| `TRAFFIC_API_KEY` | Optional | - | OpenRouteService API key for `/context.traffic` ETA (if not set, traffic skipped) |
+| `TRAFFIC_ORIGIN_LAT`, `TRAFFIC_ORIGIN_LON` | Optional | - | Commute origin coordinates (required only if `TRAFFIC_API_KEY` is set) |
+| `TRAFFIC_DEST_LAT`, `TRAFFIC_DEST_LON` | Optional | - | Commute destination coordinates (required only if `TRAFFIC_API_KEY` is set) |
 
 ### Context Sources (env → enables)
 

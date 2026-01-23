@@ -4,7 +4,6 @@ import time
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
-from redis.asyncio import Redis
 
 from app.cache import get_json, set_json
 from app.http_envelope import err, ok
@@ -36,14 +35,16 @@ async def get_context(request: Request, debug: bool = Query(False), refresh: boo
 
     Cache:
       - Short TTL Redis cache with cache proof headers.
+      - If Redis is not configured, the endpoint still works (cache BYPASS).
     """
     start = time.perf_counter()
 
     settings = get_settings()
-    redis: Redis = request.app.state.redis
+    redis = getattr(request.app.state, "redis", None)
     cache_key = _context_cache_key(request)
 
-    if not refresh:
+    # Cache read (only if Redis exists and refresh is false)
+    if (redis is not None) and (not refresh):
         cached = await get_json(redis, cache_key)
         if cached is not None:
             inc_cache_hit()
@@ -75,10 +76,12 @@ async def get_context(request: Request, debug: bool = Query(False), refresh: boo
         )
         return JSONResponse(payload, status_code=status)
 
-    await set_json(redis, cache_key, {"data": data}, ttl_seconds=settings.cache_ttl_seconds)
+    # Cache write (only if Redis exists)
+    if redis is not None:
+        await set_json(redis, cache_key, {"data": data}, ttl_seconds=settings.cache_ttl_seconds)
 
     response = JSONResponse(ok(request, data), status_code=200)
-    response.headers["X-Cache"] = "MISS"
+    response.headers["X-Cache"] = "MISS" if redis is not None else "BYPASS"
     response.headers["X-Cache-Key"] = cache_key
     response.headers["Cache-Control"] = f"public, max-age={settings.cache_ttl_seconds}"
     compute_ms = int((time.perf_counter() - start) * 1000)
