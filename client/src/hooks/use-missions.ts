@@ -24,10 +24,10 @@ export function useMissions() {
   return useQuery({
     queryKey: ["missions"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/v1/synthetic/tasks?n=50&seed=42`);
+      const res = await fetch(`${API_BASE}/api/v1/synthetic/tasks?n=100000&seed=42`);
       if (!res.ok) throw new Error("Failed to fetch missions");
       const json = await res.json();
-      const tasks = json.data.tasks as SyntheticTask[];
+      const tasks = json.data.sample as SyntheticTask[];
       
       // Transform synthetic tasks to match Mission interface
       return tasks.map((task, idx) => ({
