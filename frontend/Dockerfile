@@ -11,7 +11,7 @@ RUN npm ci
 
 # Copy source code
 COPY client/ ./client/
-COPY tsconfig.json vite.config.ts tailwind.config.ts ./
+COPY tsconfig.json vite.config.ts tailwind.config.ts postcss.config.js components.json ./
 
 # Build
 RUN npm run build
