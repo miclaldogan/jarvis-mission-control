@@ -21,17 +21,35 @@ from app.metrics import observe_request
 from app.settings import get_settings
 
 
+logger = logging.getLogger("jarvis")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown events."""
     settings = get_settings()
-    # Startup
-    app.state.redis = Redis.from_url(settings.redis_url, decode_responses=True)
-    yield
-    # Shutdown
-    redis: Redis = app.state.redis
-    await redis.aclose()
 
+    # Startup
+    redis = None
+    try:
+        redis = Redis.from_url(settings.redis_url, decode_responses=True)
+        await redis.ping()
+        app.state.redis = redis
+        logger.info("Redis connected successfully")
+    except Exception as exc:
+        # Redis is optional: fallback to no-cache mode
+        app.state.redis = None
+        logger.warning(f"Redis unavailable, cache BYPASS enabled: {exc}")
+
+    yield
+
+    # Shutdown
+    redis = getattr(app.state, "redis", None)
+    if redis is not None:
+        try:
+            await redis.aclose()
+        except Exception:
+            pass
 
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -88,7 +106,7 @@ def create_app() -> FastAPI:
                 request,
                 code="INTERNAL",
                 message="Unexpected server error",
-                status_code=500,
+                status_code=500, 
             )
             response = JSONResponse(payload, status_code=status)
 

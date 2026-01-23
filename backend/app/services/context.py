@@ -10,6 +10,7 @@ from app.services.ingestion.news import fetch_news
 from app.services.ingestion.weather import fetch_weather
 from app.services.ingestion.exchange import fetch_exchange_rates
 from app.services.ingestion.trending import fetch_trending
+from app.services.ingestion.traffic import fetch_traffic_eta_minutes
 
 
 def _now_iso() -> str:
@@ -45,6 +46,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
         "github": None,
         "news": [],
         "exchange": None,
+        "traffic": None,
         "trending": [],
         "calendar": {"events_today": 0},
         "sources_ok": [],
@@ -151,5 +153,40 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
                 )
         except Exception as e:
             data["sources_failed"].append({"source": "trending", "error": str(e)})
-
+    
+    # Traffic / Commute ETA (OpenRouteService)
+    traffic_key = os.getenv("TRAFFIC_API_KEY")
+    if not traffic_key:
+        data["sources_skipped"].append(
+            {
+                "source": "traffic",
+                "reason": "Missing required env var: TRAFFIC_API_KEY",
+            }
+        )
+    else:
+        # coords are required (we keep this check here so we can show clear reason)
+        missing_coords = _missing("TRAFFIC_ORIGIN_LAT", "TRAFFIC_ORIGIN_LON", "TRAFFIC_DEST_LAT", "TRAFFIC_DEST_LON")
+        if missing_coords:
+            data["sources_skipped"].append(
+                {
+                    "source": "traffic",
+                    "reason": f"Missing required env vars: {', '.join(missing_coords)}",
+                }
+            )
+        else:
+            try:
+                t = await fetch_traffic_eta_minutes(timeout_s=10.0)
+                if t.get("ok"):
+                    traffic_obj: dict[str, Any] = t["data"]
+                    if debug:
+                        traffic_obj["raw"] = t
+                    data["traffic"] = traffic_obj
+                    data["sources_ok"].append("traffic")
+                else:
+                    # If adapter returned a skip_reason, treat as skipped (not failed)
+                    data["sources_skipped"].append(
+                        {"source": "traffic", "reason": f"Skipped: {t.get('skip_reason', 'unknown')}"}
+                    )
+            except Exception as e:
+                data["sources_failed"].append({"source": "traffic", "error": str(e)})
     return data
