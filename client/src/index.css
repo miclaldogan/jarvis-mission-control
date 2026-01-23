@@ -4,9 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom cyberpunk scrollbar styles */
-@import './styles/scrollbar.css';
-
 :root {
   /* Sci-fi Palette - Dark Mode Only base */
   --background: 240 20% 5%;       /* Deep space black #0a0a0f */
@@ -81,4 +78,29 @@
 }
 ::-webkit-scrollbar-thumb {
   @apply bg-primary/30 hover:bg-primary/50 rounded-full;
+}
+
+/* Custom cyberpunk thin scrollbar for exchange rates */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(188, 19, 254, 0.5);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(188, 19, 254, 0.8);
+}
+
+/* Firefox scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(188, 19, 254, 0.5) rgba(0, 0, 0, 0.3);
 }
