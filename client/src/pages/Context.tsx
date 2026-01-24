@@ -1,6 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { CyberCard } from "@/components/CyberCard";
 import { useContextItems } from "@/hooks/use-context";
+import { useSystemVitals } from "@/hooks/use-system-vitals";
 import { useState, useEffect } from "react";
 import { 
   CloudRain, 
@@ -31,12 +32,13 @@ import {
 } from "recharts";
 
 export default function Context() {
-  const { data: context, isLoading } = useContextItems();
-  
   // City selector state (localStorage persistence)
   const [selectedCity, setSelectedCity] = useState<string>(() => {
     return localStorage.getItem('jarvis-selected-city') || 'Istanbul';
   });
+
+  const { data: context, isLoading } = useContextItems(selectedCity);
+  const { data: vitals } = useSystemVitals();
 
   useEffect(() => {
     localStorage.setItem('jarvis-selected-city', selectedCity);
@@ -44,14 +46,17 @@ export default function Context() {
 
   const cities = ['Istanbul', 'Ankara', 'Izmir', 'Antalya'];
 
-  // Mock radar data for system visualization
-  const radarData = [
-    { subject: 'CPU', A: 120, fullMark: 150 },
-    { subject: 'RAM', A: 98, fullMark: 150 },
-    { subject: 'DISK', A: 86, fullMark: 150 },
-    { subject: 'NET', A: 99, fullMark: 150 },
-    { subject: 'GPU', A: 85, fullMark: 150 },
-    { subject: 'AI', A: 65, fullMark: 150 },
+  // Real system vitals radar data
+  const radarData = vitals ? [
+    { subject: 'CPU', A: vitals.cpu_percent, fullMark: 100 },
+    { subject: 'RAM', A: vitals.memory_percent, fullMark: 100 },
+    { subject: 'DISK', A: vitals.disk_percent, fullMark: 100 },
+    { subject: 'NET', A: Math.min(vitals.network_sent_mbps + vitals.network_recv_mbps, 100), fullMark: 100 },
+  ] : [
+    { subject: 'CPU', A: 0, fullMark: 100 },
+    { subject: 'RAM', A: 0, fullMark: 100 },
+    { subject: 'DISK', A: 0, fullMark: 100 },
+    { subject: 'NET', A: 0, fullMark: 100 },
   ];
 
   const areaData = [

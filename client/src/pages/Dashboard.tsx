@@ -1,5 +1,6 @@
 import { useMissions, useCreateMission } from "@/hooks/use-missions";
 import { useMetrics } from "@/hooks/use-metrics";
+import { useSystemVitals } from "@/hooks/use-system-vitals";
 import { CyberCard } from "@/components/CyberCard";
 import { Layout } from "@/components/Layout";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ type InsertMission = z.infer<typeof insertMissionSchema>;
 export default function Dashboard() {
   const { data: missions, isLoading: loadingMissions } = useMissions();
   const { data: metrics } = useMetrics();
+  const { data: vitals } = useSystemVitals();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Helper to find metric value by name
@@ -112,13 +114,12 @@ export default function Dashboard() {
              <div className="space-y-6">
                <div className="space-y-2">
                  <div className="flex justify-between text-xs font-mono text-primary/80">
-                   <span>Mainframe CPU</span>
-                   <span>78%</span>
+                   <span>{vitals?.cpu_percent.toFixed(1) ?? '0'}%</span>
                  </div>
                  <div className="h-2 bg-primary/10 rounded-full overflow-hidden border border-primary/20">
                    <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: "78%" }}
+                      animate={{ width: `${vitals?.cpu_percent ?? 0}%` }}
                       transition={{ duration: 1, ease: "easeOut" }}
                       className="h-full bg-primary shadow-[0_0_10px_rgba(0,243,255,0.5)]" 
                    />
@@ -128,12 +129,12 @@ export default function Dashboard() {
                <div className="space-y-2">
                  <div className="flex justify-between text-xs font-mono text-secondary/80">
                    <span>Memory Usage</span>
-                   <span>42%</span>
+                   <span>{vitals?.memory_percent.toFixed(1) ?? '0'}%</span>
                  </div>
                  <div className="h-2 bg-secondary/10 rounded-full overflow-hidden border border-secondary/20">
                    <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: "42%" }}
+                      animate={{ width: `${vitals?.memory_percent ?? 0}%` }}
                       transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
                       className="h-full bg-secondary shadow-[0_0_10px_rgba(188,19,254,0.5)]" 
                    />
@@ -142,13 +143,13 @@ export default function Dashboard() {
 
                <div className="space-y-2">
                  <div className="flex justify-between text-xs font-mono text-accent/80">
-                   <span>Network Load</span>
-                   <span>12%</span>
+                   <span>Network (Sent)</span>
+                   <span>{vitals?.network_sent_mbps.toFixed(2) ?? '0'} MB/s</span>
                  </div>
                  <div className="h-2 bg-accent/10 rounded-full overflow-hidden border border-accent/20">
                    <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: "12%" }}
+                      animate={{ width: `${Math.min(vitals?.network_sent_mbps ?? 0, 100)}%` }}
                       transition={{ duration: 1, ease: "easeOut", delay: 0.4 }}
                       className="h-full bg-accent shadow-[0_0_10px_rgba(34,197,94,0.5)]" 
                    />

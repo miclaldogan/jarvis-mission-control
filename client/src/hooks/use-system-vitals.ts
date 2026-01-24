@@ -20,9 +20,14 @@ type Envelope<T> = EnvelopeOk<T> | EnvelopeErr;
 // UI-friendly shape (issue’deki basit interface)
 export interface SystemVitals {
   cpu: number;
+  cpu_percent: number;
   memory: number;
+  memory_percent: number;
   disk: number;
+  disk_percent: number;
   network: number;
+  network_sent_mbps: number;
+  network_recv_mbps: number;
   timestamp: string;
 }
 
@@ -35,9 +40,14 @@ function toUiVitals(json: Envelope<any>): SystemVitals {
 
   return {
     cpu: Number(d?.cpu ?? 0),
+    cpu_percent: Number(d?.cpu ?? 0),
     memory: Number(d?.memory ?? 0),
+    memory_percent: Number(d?.memory ?? 0),
     disk: Number(d?.disk ?? 0),
+    disk_percent: Number(d?.disk ?? 0),
     network: Number(d?.network ?? 0),
+    network_sent_mbps: Number(d?.network_mb_sent ?? 0),
+    network_recv_mbps: Number(d?.network_mb_recv ?? 0),
     timestamp: d?.timestamp ?? json.meta?.ts ?? new Date().toISOString(),
   };
 }

@@ -39,11 +39,16 @@ interface ContextData {
 }
 
 // GET /api/v1/context
-export function useContextItems() {
+export function useContextItems(city?: string) {
   return useQuery({
-    queryKey: ["context"],
+    queryKey: ["context", city],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/v1/context?refresh=true`);
+      const url = new URL(`${API_BASE}/api/v1/context`);
+      url.searchParams.set("refresh", "true");
+      if (city) {
+        url.searchParams.set("city", city);
+      }
+      const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Failed to fetch context");
       const json = await res.json();
       return json.data as ContextData;
