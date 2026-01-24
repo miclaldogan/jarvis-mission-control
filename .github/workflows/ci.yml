@@ -47,4 +47,4 @@ jobs:
         run: docker build -t jarvis-backend ./backend
 
       - name: Build client image
-        run: docker build -t jarvis-client -f frontend/Dockerfile .
+        run: docker build -t jarvis-client -f client/Dockerfile ./client
