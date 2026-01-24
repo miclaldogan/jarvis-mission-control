@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import Context from "@/pages/Context";
 import Lab from "@/pages/Lab";
 import SimulationLab from "@/pages/SimulationLab";
+import MissionRunHistory from "@/pages/MissionRunHistory";
 
 function Router() {
   return (
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/context" component={Context} />
       <Route path="/lab" component={Lab} />
       <Route path="/simulation" component={SimulationLab} />
+      <Route path="/runs" component={MissionRunHistory} />
       <Route component={NotFound} />
     </Switch>
   );
