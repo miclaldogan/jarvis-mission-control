@@ -4,27 +4,27 @@ import asyncio
 import random
 import time
 from datetime import datetime, timedelta, timezone
-<<<<<<< HEAD
+
 from typing import Literal, Optional
-=======
+
 import random
 from typing import Literal, Optional, Any
->>>>>>> dev
+
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 
 from app.cache import (
-<<<<<<< HEAD
+
     cache_key_category_breakdown,
     cache_key_mission_load,
     cache_key_priority_distribution,
-=======
+
     cache_key_mission_load,
     cache_key_priority_distribution,
     cache_key_category_breakdown,
->>>>>>> dev
+
     get_json,
     set_json,
 )
