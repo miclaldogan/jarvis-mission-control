@@ -149,6 +149,21 @@ def create_app() -> FastAPI:
     @app.get("/metrics")
     async def metrics() -> Response:
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    
+    @app.get("/metrics/cache")
+    async def cache_metrics():
+        from app.metrics import cache_hits_total, cache_misses_total
+        hits = int(cache_hits_total._value.get())
+        misses = int(cache_misses_total._value.get())
+        total = hits + misses
+        hit_rate = round((hits / total) * 100, 2) if total > 0 else 0.0
+
+        return {
+            "hits": hits,
+            "misses": misses,
+            "total": total,
+            "hit_rate": hit_rate,
+        }
 
     # NOTE: We intentionally handle exceptions in middleware so that:
     # - every response includes X-Request-Id
