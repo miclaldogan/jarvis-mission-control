@@ -130,11 +130,11 @@ class TestMissionRepository:
         assert len(history) == 2
     
     def test_completion_stats(self):
-        MissionRepository.create(Mission(id="s1", status="open"))
-        MissionRepository.create(Mission(id="s2", status="open"))
-        MissionRepository.create(Mission(id="s3", status="done"))
-        MissionRepository.create(Mission(id="s4", status="done"))
-        MissionRepository.create(Mission(id="s5", status="done"))
+        MissionRepository.create(Mission(id="s1", title="Task 1", status="open"))
+        MissionRepository.create(Mission(id="s2", title="Task 2", status="open"))
+        MissionRepository.create(Mission(id="s3", title="Task 3", status="done"))
+        MissionRepository.create(Mission(id="s4", title="Task 4", status="done"))
+        MissionRepository.create(Mission(id="s5", title="Task 5", status="done"))
         
         stats = MissionRepository.get_completion_stats()
         assert stats["total"] == 5
