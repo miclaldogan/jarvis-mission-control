@@ -3,6 +3,7 @@ import { useMetrics } from "@/hooks/use-metrics";
 import { useSystemVitals } from "@/hooks/use-system-vitals";
 import { CyberCard } from "@/components/CyberCard";
 import { Layout } from "@/components/Layout";
+import { TaskDetailDialog } from "@/components/TaskDetailDialog";
 import { cn } from "@/lib/utils";
 import { 
   AlertCircle, 
@@ -43,6 +44,8 @@ export default function Dashboard() {
   const { data: metrics } = useMetrics();
   const { data: vitals } = useSystemVitals();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedMission, setSelectedMission] = useState<any>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Helper to find metric value by name
   const getMetric = (name: string) => metrics?.find(m => m.name === name);
@@ -332,7 +335,12 @@ export default function Dashboard() {
                        </div>
                      </div>
                      
-                     <Button size="sm" variant="outline" className="border-white/10 hover:bg-white/5 hover:text-white">
+                     <Button size="sm" variant="outline" className="border-white/10 hover:bg-white/5 hover:text-white"
+                       onClick={() => {
+                         setSelectedMission(mission);
+                         setIsDetailOpen(true);
+                       }}
+                     >
                        DETAILS
                      </Button>
                    </div>
@@ -342,6 +350,12 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      <TaskDetailDialog
+        mission={selectedMission}
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+      />
     </Layout>
   );
 }
