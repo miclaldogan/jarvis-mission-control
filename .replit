@@ -1,8 +1,17 @@
 modules = ["nodejs-20"]
 
 [[ports]]
+localPort = 3000
+externalPort = 3000
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
+
+[[ports]]
 localPort = 5173
 externalPort = 80
 
 [nix]
-packages = ["nano"]
+packages = ["nano", "lsof"]
+channel = "stable-25_05"
