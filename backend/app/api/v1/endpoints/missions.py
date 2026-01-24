@@ -228,3 +228,85 @@ async def update_mission_status(
     compute_ms = int((time.perf_counter() - start) * 1000)
     response.headers["X-Compute-Time-ms"] = str(compute_ms)
     return response
+
+
+@router.get("/missions/{mission_id}/audit")
+async def get_mission_audit_log(request: Request, mission_id: str):
+    """
+    Get detailed audit log for a mission.
+    
+    Returns the complete history of changes with human-readable explanations.
+    Useful for understanding why priority changed, who made updates, etc.
+    """
+    start = time.perf_counter()
+    
+    mission = storage.get_mission(mission_id)
+    if not mission:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": {
+                    "code": "MISSION_NOT_FOUND",
+                    "message": f"Mission with ID '{mission_id}' does not exist",
+                },
+                "meta": {
+                    "request_id": request.headers.get("X-Request-ID", "unknown"),
+                    "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                },
+            },
+            status_code=404,
+        )
+    
+    history = storage.get_mission_history(mission_id)
+    
+    # Enrich audit log with categorization
+    audit_entries = []
+    for entry in history:
+        event_type = entry.get("event_type", "")
+        
+        # Categorize events
+        category = "other"
+        triggered_by = "system"
+        
+        if event_type == "created":
+            category = "lifecycle"
+            triggered_by = "system"
+        elif event_type == "status_changed":
+            category = "lifecycle"
+            triggered_by = "user"  # Assume user triggered status changes
+        elif event_type == "priority_changed":
+            category = "priority"
+            triggered_by = "system"  # Usually system recalculates priority
+        
+        audit_entry = {
+            "id": f"audit_{mission_id}_{len(audit_entries) + 1}",
+            "mission_id": mission_id,
+            "timestamp": entry.get("timestamp"),
+            "event_type": event_type,
+            "category": category,
+            "reason": entry.get("reason", ""),
+            "data": entry.get("data", {}),
+            "triggered_by": triggered_by,
+        }
+        audit_entries.append(audit_entry)
+    
+    # Summary statistics
+    event_types = {}
+    for entry in audit_entries:
+        event_type = entry["event_type"]
+        event_types[event_type] = event_types.get(event_type, 0) + 1
+    
+    data = {
+        "mission_id": mission_id,
+        "mission_title": mission.get("title"),
+        "audit_log": audit_entries,
+        "total_events": len(audit_entries),
+        "event_summary": event_types,
+        "first_event": audit_entries[0]["timestamp"] if audit_entries else None,
+        "last_event": audit_entries[-1]["timestamp"] if audit_entries else None,
+    }
+    
+    response = JSONResponse(ok(request, data), status_code=200)
+    compute_ms = int((time.perf_counter() - start) * 1000)
+    response.headers["X-Compute-Time-ms"] = str(compute_ms)
+    return response
