@@ -57,6 +57,8 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
         "sources_ok": [],
         "sources_failed": [],
         "sources_skipped": [],
+        # Freshness tracking: when each source was last updated
+        "freshness": {},
     }
 
     # Weather
@@ -70,6 +72,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
         )
     else:
         try:
+            fetch_time = _now_iso()
             w = await fetch_weather(city=city)
             weather_obj: dict[str, Any] = {
                 "city": w.get("city") if isinstance(w, dict) else os.getenv("WEATHER_CITY", "Unknown"),
@@ -83,6 +86,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
                 weather_obj["raw"] = w if isinstance(w, dict) else {"value": w}
             data["weather"] = weather_obj
             data["sources_ok"].append("weather")
+            data["freshness"]["weather_updated_at"] = fetch_time
         except Exception as e:
             data["sources_failed"].append({"source": "weather", "error": str(e)})
 
@@ -97,6 +101,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
         )
     else:
         try:
+            fetch_time = _now_iso()
             g = await fetch_github()
             github_obj: dict[str, Any] = {
                 "owner": os.getenv("GITHUB_OWNER"),
@@ -108,18 +113,22 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
                 github_obj["raw"] = g if isinstance(g, dict) else {"value": g}
             data["github"] = github_obj
             data["sources_ok"].append("github")
+            data["freshness"]["github_updated_at"] = fetch_time
         except Exception as e:
             data["sources_failed"].append({"source": "github", "error": str(e)})
 
     # News (Hacker News via Algolia)
     try:
+        fetch_time = _now_iso()
         data["news"] = await fetch_news(limit=news_limit)
         data["sources_ok"].append("news")
+        data["freshness"]["news_updated_at"] = fetch_time
     except Exception as e:
         data["sources_failed"].append({"source": "news", "error": str(e)})
 
     # Exchange rates (Frankfurter/ECB) - no API key required
     try:
+        fetch_time = _now_iso()
         base = os.getenv("EXCHANGE_BASE", "TRY")
         ex = await fetch_exchange_rates(base=base)
         if ex.get("ok"):
@@ -132,6 +141,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
                 exchange_obj["raw"] = ex
             data["exchange"] = exchange_obj
             data["sources_ok"].append("exchange")
+            data["freshness"]["exchange_updated_at"] = fetch_time
         else:
             data["sources_failed"].append({"source": "exchange", "error": ex.get("error", "unknown")})
     except Exception as e:
@@ -148,10 +158,12 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
         )
     else:
         try:
+            fetch_time = _now_iso()
             trending_result = await fetch_trending(api_key=tmdb_key, limit=5)
             if trending_result.get("ok"):
                 data["trending"] = trending_result.get("items", [])
                 data["sources_ok"].append("trending")
+                data["freshness"]["trending_updated_at"] = fetch_time
             else:
                 data["sources_failed"].append(
                     {"source": "trending", "error": trending_result.get("error", "unknown")}
@@ -180,6 +192,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
             )
         else:
             try:
+                fetch_time = _now_iso()
                 t = await fetch_traffic_eta_minutes(timeout_s=10.0)
                 if t.get("ok"):
                     traffic_obj: dict[str, Any] = t["data"]
@@ -187,6 +200,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
                         traffic_obj["raw"] = t
                     data["traffic"] = traffic_obj
                     data["sources_ok"].append("traffic")
+                    data["freshness"]["traffic_updated_at"] = fetch_time
                 else:
                     # If adapter returned a skip_reason, treat as skipped (not failed)
                     data["sources_skipped"].append(
