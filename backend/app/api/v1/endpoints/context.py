@@ -25,7 +25,12 @@ def _context_cache_key(request: Request) -> str:
 
 
 @router.get("/context")
-async def get_context(request: Request, debug: bool = Query(False), refresh: bool = Query(False)):
+async def get_context(
+    request: Request,
+    debug: bool = Query(False),
+    refresh: bool = Query(False),
+    city: str = Query(None, description="City name for weather (Istanbul, Ankara, Izmir, Antalya)"),
+):
     """
     Return latest aggregated context snapshot.
 
@@ -60,7 +65,7 @@ async def get_context(request: Request, debug: bool = Query(False), refresh: boo
     inc_cache_miss()
 
     # Build fresh snapshot
-    data = await build_context_snapshot(debug=debug)
+    data = await build_context_snapshot(debug=debug, city=city)
 
     # All failed -> 502 (do NOT cache failures)
     if len(data.get("sources_ok") or []) == 0:

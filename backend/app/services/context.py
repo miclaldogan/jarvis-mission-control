@@ -25,13 +25,18 @@ def _missing(*names: str) -> list[str]:
     return out
 
 
-async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) -> dict[str, Any]:
+async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, city: str = None) -> dict[str, Any]:
     """Aggregate multiple external sources into a single normalized context dict.
 
     Contract notes:
     - Always returns a normalized schema.
     - Exposes source health lists (ok/failed/skipped) to support UI resilience.
     - Raw payloads are included only when debug=true.
+    
+    Args:
+        debug: Include raw API responses in output
+        news_limit: Maximum number of news articles to return
+        city: City name for weather (Istanbul, Ankara, Izmir, Antalya)
     """
 
     observed_at = _now_iso()
@@ -65,7 +70,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5) ->
         )
     else:
         try:
-            w = await fetch_weather()
+            w = await fetch_weather(city=city)
             weather_obj: dict[str, Any] = {
                 "city": w.get("city") if isinstance(w, dict) else os.getenv("WEATHER_CITY", "Unknown"),
                 "lat": os.getenv("WEATHER_LAT"),
