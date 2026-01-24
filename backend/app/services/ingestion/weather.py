@@ -1,7 +1,14 @@
 import os
 import httpx
-from typing import Dict
+from typing import Dict, Optional
 
+# City coordinates lookup (Turkish cities)
+CITY_COORDINATES = {
+    "Istanbul": {"lat": "41.0082", "lon": "28.9784", "tz": "Europe/Istanbul"},
+    "Ankara": {"lat": "39.9334", "lon": "32.8597", "tz": "Europe/Istanbul"},
+    "Izmir": {"lat": "38.4237", "lon": "27.1428", "tz": "Europe/Istanbul"},
+    "Antalya": {"lat": "36.8969", "lon": "30.7133", "tz": "Europe/Istanbul"},
+}
 
 # WMO Weather interpretation codes to our condition schema
 # https://open-meteo.com/en/docs
@@ -33,24 +40,38 @@ WEATHERCODE_TO_CONDITION = {
 }
 
 
-async def fetch_weather() -> Dict[str, any]:
+async def fetch_weather(city: Optional[str] = None) -> Dict[str, any]:
     """
     Fetch current weather from Open-Meteo and return normalized WeatherContext.
 
-    Reads from environment:
+    Args:
+        city: Optional city name (Istanbul, Ankara, Izmir, Antalya). 
+              If provided, uses predefined coordinates. Otherwise falls back to env vars.
+
+    Reads from environment (if city not provided):
     - WEATHER_LAT: latitude (required)
     - WEATHER_LON: longitude (required)
     - WEATHER_TZ: timezone (default: Europe/Istanbul)
+    - WEATHER_CITY: city name (default: Istanbul)
 
     Returns:
-        {"temp": <float>, "condition": <string>}
+        {"temp_c": <float>, "condition": <string>, "city": <string>}
 
     Raises:
         Exception: On HTTP error, missing env vars, or parse error.
     """
-    lat = os.getenv("WEATHER_LAT")
-    lon = os.getenv("WEATHER_LON")
-    tz = os.getenv("WEATHER_TZ", "Europe/Istanbul")
+    # Use city coordinates if provided, otherwise env vars
+    if city and city in CITY_COORDINATES:
+        coords = CITY_COORDINATES[city]
+        lat = coords["lat"]
+        lon = coords["lon"]
+        tz = coords["tz"]
+        city_name = city
+    else:
+        lat = os.getenv("WEATHER_LAT")
+        lon = os.getenv("WEATHER_LON")
+        tz = os.getenv("WEATHER_TZ", "Europe/Istanbul")
+        city_name = os.getenv("WEATHER_CITY", "Istanbul")
 
     if not lat or not lon:
         raise Exception("Missing required env vars: WEATHER_LAT, WEATHER_LON")
@@ -90,7 +111,7 @@ async def fetch_weather() -> Dict[str, any]:
 
             condition = WEATHERCODE_TO_CONDITION.get(weathercode, "unknown")
 
-            return {"temp": temp, "condition": condition}
+            return {"temp_c": temp, "condition": condition, "city": city_name}
 
         except ValueError as e:
             raise Exception(f"Failed to parse Open-Meteo response: {e}")

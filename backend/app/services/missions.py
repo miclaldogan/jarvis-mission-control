@@ -4,6 +4,8 @@ import random
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Optional
 
+from app.services.scoring import calculate_mission_score
+
 
 Priority = Literal["P1", "P2", "P3", "P4"]
 Status = Literal["open", "done", "snoozed"]
@@ -62,11 +64,24 @@ def generate_missions(
         actions: Optional[list[dict[str, str]]] = None,
     ) -> None:
         idx = len(missions) + 1
+        
+        # Calculate dynamic score
+        score = calculate_mission_score(
+            due_at=due_at,
+            tags=tags,
+            context=context,
+            preferences=preferences,
+        )
+        score_dict = score.to_dict()
+        
         missions.append(
             {
                 "id": f"msn_{idx:03d}",
                 "title": title,
-                "priority": priority,
+                "priority": score_dict["priority"],  # Use calculated priority
+                "priority_score": score_dict["total"],
+                "score_breakdown": score_dict["breakdown"],
+                "reasons": score_dict["reasons"],
                 "status": "open",
                 "due_at": due_at,
                 "tags": tags,

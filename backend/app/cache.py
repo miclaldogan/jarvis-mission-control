@@ -27,6 +27,23 @@ def cache_key_report(*, window: str, bucket: str) -> str:
 def cache_key_mission_load(*, window: str, bucket: str, seed: int) -> str:
     return f"cache:v1:mission_load:window={window}:bucket={bucket}:seed={seed}"
 
+def cache_key_priority_distribution(*, window: str, buckets: int, seed: int) -> str:
+    return f"cache:v1:priority_distribution:window={window}:buckets={buckets}:seed={seed}"
+
+
+def cache_key_category_breakdown(*, window: str, top_n: int, seed: int) -> str:
+    return f"cache:v1:category_breakdown:window={window}:top_n={top_n}:seed={seed}"
+
+
+# ✅ NEW (Issue #105): Priority distribution cache key
+def cache_key_priority_distribution(*, window: str, buckets: int, seed: int) -> str:
+    return f"cache:v1:priority_distribution:window={window}:buckets={buckets}:seed={seed}"
+
+
+# ✅ NEW (Issue #105): Category breakdown cache key
+def cache_key_category_breakdown(*, window: str, top_n: int, seed: int) -> str:
+    return f"cache:v1:category_breakdown:window={window}:top_n={top_n}:seed={seed}"
+
 
 async def get_json(redis: Redis, key: str) -> Optional[dict[str, Any]]:
     raw = await redis.get(key)

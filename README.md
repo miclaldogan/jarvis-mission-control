@@ -222,6 +222,43 @@ Example file: `backend/.env.example`
 - Open PR to `dev`, get at least 1 approval.
 - Merge to `main` only for stable milestones.
 
+## Contributors
+
+### Frontend Development
+- **[@burcuyldrm](https://github.com/burcuyldrm)** - Cyberpunk UI Design & Implementation
+  - React 18 + Vite 7.3.1 + TypeScript scaffolding
+  - shadcn/ui component library integration (50+ components)
+  - Cyberpunk theme design (cyan/purple/green palette, neon glows, terminal aesthetics)
+  - Wouter routing setup
+  - Framer Motion animations
+  - Original work from `feature/frontend-ui` branch
+
+### Backend Development & Integration
+- **[@miclaldogan](https://github.com/miclaldogan)** - FastAPI Backend & System Architecture
+  - FastAPI REST API with 6 endpoints
+  - Redis cache layer with proof headers
+  - 6 ingestion sources (weather, github, news, exchange, traffic, trending)
+  - Docker Compose orchestration
+  - Frontend-backend integration & API adaptation
+  - Rate limiting & metrics
+
+### Quality Assurance & Documentation
+- **[@mervecaloglu](https://github.com/mervecaloglu)** - Testing & Documentation
+  - Backend test suite (18 tests)
+  - Documentation improvements
+  - Traffic ingestion implementation
+  - Environment configuration
+
+- **[@reyyannerva](https://github.com/reyyannerva)** - Specifications & Documentation
+  - Mission generation rules (v1 spec)
+  - DB schema draft (tasks/context/reports)
+  - Synthetic tasks generator spec (100k/1M)
+  - Report aggregation spec (bucket/window)
+  - Context schema normalization
+  - Demo documentation & snapshots
+  - 3 merged PRs (#23, #37, #57)
+  - 6 closed issues (#2, #3, #6, #8, #14, #76)
+
 ## Troubleshooting
 - If `docker compose` is missing:
 	- On Mint/Ubuntu, `sudo apt install -y docker-compose-v2` typically provides it.
