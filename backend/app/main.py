@@ -17,11 +17,14 @@ from redis.asyncio import Redis
 
 from app.api.v1.router import api_router
 from app.http_envelope import err
+from app.logging_config import setup_structured_logging, get_logger, LogContext
 from app.metrics import observe_request
 from app.settings import get_settings
 
+# Setup structured logging on module import
+setup_structured_logging()
 
-logger = logging.getLogger("jarvis")
+logger = get_logger("jarvis")
 
 
 @asynccontextmanager
@@ -83,9 +86,15 @@ def create_app() -> FastAPI:
 
         request.state.request_id = request_id
 
+        # Log incoming request
+        with LogContext(request_id=request_id, endpoint=request.url.path, method=request.method):
+            logger.info(f"Request started: {request.method} {request.url.path}")
+
         try:
             response = await call_next(request)
         except RequestValidationError as exc:
+            with LogContext(request_id=request_id, endpoint=request.url.path, method=request.method, error="validation_error"):
+                logger.warning(f"Request validation failed: {exc.errors()}")
             payload, status = err(
                 request,
                 code="INVALID_PARAMS",
@@ -95,6 +104,8 @@ def create_app() -> FastAPI:
             )
             response = JSONResponse(payload, status_code=status)
         except HTTPException as exc:
+            with LogContext(request_id=request_id, endpoint=request.url.path, method=request.method, error="http_error", status_code=exc.status_code):
+                logger.warning(f"HTTP exception: {exc.detail}")
             payload, status = err(
                 request,
                 code="HTTP_ERROR",
@@ -102,7 +113,9 @@ def create_app() -> FastAPI:
                 status_code=exc.status_code,
             )
             response = JSONResponse(payload, status_code=status)
-        except Exception:
+        except Exception as e:
+            with LogContext(request_id=request_id, endpoint=request.url.path, method=request.method, error=str(e)):
+                logger.exception(f"Unhandled exception: {e}")
             payload, status = err(
                 request,
                 code="INTERNAL",
@@ -124,18 +137,15 @@ def create_app() -> FastAPI:
             "geolocation=(), microphone=(), camera=()",
         )
 
-        logger.info(
-            json.dumps(
-                {
-                    "event": "request",
-                    "request_id": request_id,
-                    "method": request.method,
-                    "path": request.url.path,
-                    "status": getattr(response, "status_code", None),
-                    "duration_ms": duration_ms,
-                }
-            )
-        )
+        # Log response with context
+        with LogContext(
+            request_id=request_id,
+            endpoint=request.url.path,
+            method=request.method,
+            status_code=getattr(response, "status_code", None),
+            duration_ms=duration_ms
+        ):
+            logger.info(f"Request completed: {request.method} {request.url.path} [{getattr(response, 'status_code', None)}] in {duration_ms}ms")
 
         observe_request(
             method=request.method,
