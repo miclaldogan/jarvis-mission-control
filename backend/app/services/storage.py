@@ -1,5 +1,5 @@
 """
-In-memory storage for missions and their history.
+In-memory storage for missions, runs, and their history.
 
 This is a temporary solution until database integration.
 All data is lost on server restart.
@@ -14,6 +14,8 @@ from collections import defaultdict
 # Global in-memory stores
 _missions: dict[str, dict[str, Any]] = {}
 _mission_history: dict[str, list[dict[str, Any]]] = defaultdict(list)
+_runs: dict[str, dict[str, Any]] = {}
+_run_list: list[str] = []  # Ordered list of run IDs
 
 
 def store_mission(mission: dict[str, Any]) -> None:
@@ -116,7 +118,36 @@ def get_mission_history(mission_id: str) -> list[dict[str, Any]]:
     return _mission_history.get(mission_id, [])
 
 
+def store_run(run: dict[str, Any]) -> None:
+    """Store a mission run."""
+    run_id = run["run_id"]
+    _runs[run_id] = run
+    if run_id not in _run_list:
+        _run_list.insert(0, run_id)  # Most recent first
+
+
+def get_run(run_id: str) -> dict[str, Any] | None:
+    """Get a specific run by ID."""
+    return _runs.get(run_id)
+
+
+def get_all_runs(limit: int = 50) -> list[dict[str, Any]]:
+    """Get all runs, most recent first."""
+    return [_runs[rid] for rid in _run_list[:limit] if rid in _runs]
+
+
+def get_runs_for_mission(mission_id: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Get all runs for a specific mission."""
+    return [
+        _runs[rid]
+        for rid in _run_list
+        if rid in _runs and _runs[rid]["mission_id"] == mission_id
+    ][:limit]
+
+
 def clear_all() -> None:
     """Clear all stored missions and history (for testing)."""
     _missions.clear()
     _mission_history.clear()
+    _runs.clear()
+    _run_list.clear()
