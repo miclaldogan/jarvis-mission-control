@@ -1,68 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Sci-fi Palette - Dark Mode Only base */
+  --background: 240 20% 5%;       /* Deep space black #0a0a0f */
+  --foreground: 180 100% 90%;     /* Pale Cyan text */
+  
+  --primary: 186 100% 50%;        /* Cyan #00f3ff */
+  --primary-foreground: 240 20% 5%;
+  
+  --secondary: 275 98% 54%;       /* Electric Purple #bc13fe */
+  --secondary-foreground: 210 40% 98%;
+  
+  --muted: 240 10% 15%;           /* Dark Grey */
+  --muted-foreground: 180 30% 60%;
+  
+  --accent: 120 100% 35%;         /* HUD Green */
+  --accent-foreground: 240 20% 5%;
+  
+  --destructive: 0 100% 60%;
+  --destructive-foreground: 210 40% 98%;
+  
+  --border: 186 100% 20%;         /* Dim Cyan border */
+  --input: 240 10% 20%;
+  --ring: 186 100% 50%;
+  
+  --radius: 0.25rem;
+  
+  --font-display: 'Inter', sans-serif;
+  --font-mono: 'Fira Code', monospace;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased font-sans selection:bg-primary/30 selection:text-primary;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(0, 243, 255, 0.1) 0%, transparent 50%),
+      linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+    background-size: 100% 100%, 40px 40px, 40px 40px;
   }
-  a:hover {
-    color: #747bff;
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight uppercase;
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(0, 243, 255, 0.3);
   }
+  
+  .border-glow {
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.15), inset 0 0 10px rgba(0, 243, 255, 0.05);
+  }
+
+  .glass-panel {
+    @apply bg-black/40 backdrop-blur-md border border-primary/20;
+  }
+
+  .scanline {
+    background: linear-gradient(to bottom, transparent 50%, rgba(0, 243, 255, 0.02) 51%);
+    background-size: 100% 4px;
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-black/50;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 hover:bg-primary/50 rounded-full;
+}
+
+/* Custom cyberpunk thin scrollbar for exchange rates */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(188, 19, 254, 0.5);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(188, 19, 254, 0.8);
+}
+
+/* Firefox scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(188, 19, 254, 0.5) rgba(0, 0, 0, 0.3);
 }

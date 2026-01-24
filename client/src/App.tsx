@@ -1,61 +1,33 @@
-import "./App.css";
-import { useSystemVitals } from "./hooks/useSystemVitals";
-import { useContextData } from "./hooks/useContextData";
-import { useMissions } from "./hooks/useMissions";
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import NotFound from "@/pages/not-found";
+import Dashboard from "@/pages/Dashboard";
+import Context from "@/pages/Context";
+import Lab from "@/pages/Lab";
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={Dashboard} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/context" component={Context} />
+      <Route path="/lab" component={Lab} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
 
 function App() {
-  const { data: vitals, loading: vitalsLoading } = useSystemVitals();
-  const { data: context, loading: contextLoading } = useContextData();
-  const { missions, loading: missionsLoading } = useMissions();
-
   return (
-    <div style={{ padding: "2rem", maxWidth: 900, margin: "0 auto" }}>
-      <h1>🧠 Jarvis Mission Control</h1>
-
-      <div className="section">
-        <h2>⚙️ System Vitals</h2>
-        {vitalsLoading ? (
-          <p>Loading vitals...</p>
-        ) : (
-          <ul>
-            <li>CPU: {vitals?.cpu}%</li>
-            <li>Memory: {vitals?.memory} GB</li>
-            <li>Load: {vitals?.load}</li>
-          </ul>
-        )}
-      </div>
-
-      <div className="section">
-        <h2>🌍 Context</h2>
-        {contextLoading ? (
-          <p>Loading context...</p>
-        ) : (
-          <ul>
-            <li>Weather: {context?.weather}</li>
-            <li>Calendar events: {context?.calendarEvents}</li>
-            <li>Unread emails: {context?.unreadEmails}</li>
-          </ul>
-        )}
-      </div>
-
-      <div className="section">
-        <h2>🎯 Missions</h2>
-        {missionsLoading ? (
-          <p>Loading missions...</p>
-        ) : (
-          <ul>
-            {missions.map((m) => (
-              <li key={m.id}>
-                <span className={`badge ${m.priority}`}>
-                  {m.priority.toUpperCase()}
-                </span>
-                {m.title} {m.completed ? "✅" : "⏳"}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 

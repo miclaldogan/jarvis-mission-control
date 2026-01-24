@@ -35,11 +35,12 @@ async def lifespan(app: FastAPI):
         redis = Redis.from_url(settings.redis_url, decode_responses=True)
         await redis.ping()
         app.state.redis = redis
-        logger.info("Redis connected successfully")
+        logger.info(f"✅ Redis connected: {settings.redis_url}")
+        logger.info(f"📦 Cache TTL: {settings.cache_ttl_seconds} seconds")
     except Exception as exc:
         # Redis is optional: fallback to no-cache mode
         app.state.redis = None
-        logger.warning(f"Redis unavailable, cache BYPASS enabled: {exc}")
+        logger.warning(f"⚠️  Redis unavailable, cache BYPASS mode enabled: {exc}")
 
     yield
 
