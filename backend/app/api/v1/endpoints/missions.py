@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from app.http_envelope import ok
 from app.services.context import build_context_snapshot
 from app.services.missions import generate_missions
+from app.services import storage
 
 router = APIRouter()
 
@@ -114,6 +115,10 @@ async def missions_generate(request: Request, body: MissionsGenerateRequest):
         limit=body.limit,
         seed=body.seed,
     )
+    
+    # Store generated missions in memory
+    for mission in missions:
+        storage.store_mission(mission)
 
     data = {
         "context": {
@@ -124,6 +129,102 @@ async def missions_generate(request: Request, body: MissionsGenerateRequest):
     }
 
     response = JSONResponse(ok(request, data), status_code=200)
+    compute_ms = int((time.perf_counter() - start) * 1000)
+    response.headers["X-Compute-Time-ms"] = str(compute_ms)
+    return response
+
+
+@router.get("/missions/{mission_id}")
+async def get_mission_detail(request: Request, mission_id: str):
+    """
+    Get mission detail with full history.
+    
+    Returns the mission object plus a timeline of all state changes.
+    Useful for debugging why a mission has certain priority or status.
+    """
+    start = time.perf_counter()
+    
+    mission = storage.get_mission(mission_id)
+    if not mission:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": {
+                    "code": "MISSION_NOT_FOUND",
+                    "message": f"Mission with ID '{mission_id}' does not exist",
+                },
+                "meta": {
+                    "request_id": request.headers.get("X-Request-ID", "unknown"),
+                    "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                },
+            },
+            status_code=404,
+        )
+    
+    history = storage.get_mission_history(mission_id)
+    
+    data = {
+        "mission": mission,
+        "history": history,
+        "history_count": len(history),
+    }
+    
+    response = JSONResponse(ok(request, data), status_code=200)
+    compute_ms = int((time.perf_counter() - start) * 1000)
+    response.headers["X-Compute-Time-ms"] = str(compute_ms)
+    return response
+
+
+@router.patch("/missions/{mission_id}/status")
+async def update_mission_status(
+    request: Request, mission_id: str, body: dict[str, Any]
+):
+    """
+    Update mission status (open → in_progress → done).
+    
+    Records the change in mission history.
+    """
+    start = time.perf_counter()
+    
+    new_status = body.get("status")
+    reason = body.get("reason", "")
+    
+    if not new_status:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": {
+                    "code": "MISSING_STATUS",
+                    "message": "Request body must include 'status' field",
+                },
+                "meta": {
+                    "request_id": request.headers.get("X-Request-ID", "unknown"),
+                    "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                },
+            },
+            status_code=400,
+        )
+    
+    success = storage.update_mission_status(mission_id, new_status, reason)
+    if not success:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": {
+                    "code": "MISSION_NOT_FOUND",
+                    "message": f"Mission with ID '{mission_id}' does not exist",
+                },
+                "meta": {
+                    "request_id": request.headers.get("X-Request-ID", "unknown"),
+                    "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                },
+            },
+            status_code=404,
+        )
+    
+    mission = storage.get_mission(mission_id)
+    
+    response = JSONResponse(ok(request, {"mission": mission}), status_code=200)
     compute_ms = int((time.perf_counter() - start) * 1000)
     response.headers["X-Compute-Time-ms"] = str(compute_ms)
     return response
