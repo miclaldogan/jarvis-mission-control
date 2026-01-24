@@ -14,9 +14,14 @@ export function useCacheTest() {
   const [loading, setLoading] = useState(false);
   const [requestCount, setRequestCount] = useState(0);
 
-  const runTest = async (endpoint: string = "/api/v1/synthetic/tasks?n=100000&seed=42") => {
+  const runTest = async (forceRefresh: boolean = false) => {
     setLoading(true);
     const startTime = performance.now();
+    
+    // Use different endpoint each time to demonstrate cache MISS
+    // Or use refresh=true to force cache bypass
+    const seed = forceRefresh ? Date.now() : 42; // Static seed for cache HIT, dynamic for MISS
+    const endpoint = `/api/v1/synthetic/tasks?n=100000&seed=${seed}${forceRefresh ? '&refresh=true' : ''}`;
     
     try {
       const response = await fetch(`${API_BASE}${endpoint}`);

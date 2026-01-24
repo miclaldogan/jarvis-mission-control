@@ -106,11 +106,17 @@ export function useBulkCreateMissions() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (count: number) => {
+      // Synthetic tasks endpoint only accepts 100000 or 1000000
+      const validN = count >= 1000000 ? 1000000 : 100000;
       const res = await fetch(
-        `${API_BASE}/api/v1/synthetic/tasks?n=${Math.min(count, 1000)}&seed=${Date.now()}`
+        `${API_BASE}/api/v1/synthetic/tasks?n=${validN}&seed=${Date.now()}`
       );
-      if (!res.ok) throw new Error("Failed to bulk create missions");
-      return { message: `Generated ${count} tasks`, count };
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error?.message || "Failed to bulk create missions");
+      }
+      const json = await res.json();
+      return { message: `Generated ${json.data.sample.length} tasks from ${validN} total`, count: json.data.sample.length };
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["missions"] }),
   });
