@@ -284,3 +284,209 @@ Returns real-time system vitals using \psutil\.
 Notes:
 - cpu/memory/disk/network are numbers in **0-100**.
 - network is a capped proxy plus raw MB counters (future: real utilization).
+
+---
+
+## Persistence Endpoints (Issue #82, #83)
+
+### POST /api/v1/context/ingest
+
+Manually push context data from custom sources.
+
+**Request Body:**
+```json
+{
+  "source": "custom_calendar",
+  "data": {
+    "events": [
+      {"title": "Team Meeting", "time": "14:00"},
+      {"title": "Code Review", "time": "16:00"}
+    ]
+  },
+  "ttl_seconds": 300,
+  "regenerate_missions": false
+}
+```
+
+**Response (201):**
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "ctx_abc123def456",
+    "run_id": "run_20260125143052_a1b2c3",
+    "source": "custom_calendar",
+    "ingested_at": "2026-01-25T14:30:52Z",
+    "ttl_seconds": 300,
+    "message": "Context ingested successfully from 'custom_calendar'"
+  },
+  "meta": { "request_id": "req_...", "ts": "..." }
+}
+```
+
+**Parameters:**
+- `source` (required): Context source name (e.g., 'calendar', 'custom_api')
+- `data` (required): Context payload (any valid JSON object)
+- `ttl_seconds` (optional, default 120): TTL in seconds (60-86400)
+- `regenerate_missions` (optional, default false): Trigger mission regeneration
+
+---
+
+### GET /api/v1/missions/today
+
+Get missions for today (created today, due today, or open ongoing).
+
+**Response (200):**
+```json
+{
+  "ok": true,
+  "data": {
+    "missions": [
+      {
+        "id": "msn_abc123",
+        "title": "Review PR #42",
+        "priority": "P1",
+        "status": "open",
+        "due_at": "2026-01-25T18:00:00Z",
+        "tags": ["github", "review"],
+        "priority_score": 85.5
+      }
+    ],
+    "count": 1,
+    "date": "2026-01-25"
+  },
+  "meta": { "request_id": "req_...", "ts": "..." }
+}
+```
+
+---
+
+### POST /api/v1/missions/complete/{id}
+
+Mark a mission as completed.
+
+**Path Parameters:**
+- `id` (required): Mission ID to complete
+
+**Request Body (optional):**
+```json
+{
+  "notes": "Completed after code review session"
+}
+```
+
+**Response (200):**
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "msn_abc123",
+    "title": "Review PR #42",
+    "status": "done",
+    "completed_at": "2026-01-25T16:45:00Z",
+    "message": "Mission 'Review PR #42' marked as complete"
+  },
+  "meta": { "request_id": "req_...", "ts": "..." }
+}
+```
+
+**Errors:**
+- `NOT_FOUND` (404): Mission not found
+- `INVALID_PARAMS` (400): Mission already completed
+
+---
+
+### GET /api/v1/missions/history
+
+Get historical mission data with completion stats.
+
+**Query Parameters:**
+- `start_date` (optional): Filter by start date (ISO format)
+- `end_date` (optional): Filter by end date (ISO format)
+- `status` (optional, default 'done'): Filter by status
+- `limit` (optional, default 100): Max results (1-1000)
+- `format` (optional, default 'json'): Response format ('json' or 'csv')
+
+**Response (200):**
+```json
+{
+  "ok": true,
+  "data": {
+    "missions": [
+      {
+        "id": "msn_001",
+        "title": "Deploy v1.2.0",
+        "status": "done",
+        "completed_at": "2026-01-24T15:30:00Z",
+        "priority": "P1"
+      }
+    ],
+    "total": 1,
+    "stats": {
+      "total": 50,
+      "open": 10,
+      "in_progress": 5,
+      "done": 30,
+      "snoozed": 3,
+      "cancelled": 2,
+      "completion_rate": 60.0
+    }
+  },
+  "meta": { "request_id": "req_...", "ts": "..." }
+}
+```
+
+---
+
+### GET /api/v1/context/history
+
+Get historical context snapshots for analysis.
+
+**Query Parameters:**
+- `source` (optional): Filter by source name
+- `start_date` (optional): Filter by start date (ISO format)
+- `end_date` (optional): Filter by end date (ISO format)
+- `limit` (optional, default 100): Max results (1-1000)
+
+**Response (200):**
+```json
+{
+  "ok": true,
+  "data": {
+    "snapshots": [
+      {
+        "id": "ctx_abc123",
+        "run_id": "run_20260125143052_a1b2c3",
+        "source": "weather",
+        "data": {"temp_c": 15, "condition": "sunny"},
+        "ingested_at": "2026-01-25T14:30:52Z",
+        "ttl_seconds": 120,
+        "is_synthetic": false
+      }
+    ],
+    "total": 1
+  },
+  "meta": { "request_id": "req_...", "ts": "..." }
+}
+```
+
+---
+
+### GET /metrics/cache
+
+Get cache performance metrics.
+
+**Response (200):**
+```json
+{
+  "ok": true,
+  "data": {
+    "hits": 140,
+    "misses": 21,
+    "total_requests": 161,
+    "hit_rate_percent": 86.96,
+    "avg_compute_time_ms": 12.34
+  },
+  "meta": { "request_id": "req_...", "ts": "..." }
+}
+```
