@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from app.http_envelope import ok
+from app.metrics import get_cache_stats
 
 
 router = APIRouter()
@@ -72,3 +73,19 @@ async def system_vitals(request: Request):
             "error": str(e),
         }
         return JSONResponse(ok(request, data), status_code=200)
+
+
+@router.get("/metrics/cache")
+async def cache_metrics(request: Request):
+    """
+    Get cache performance statistics.
+    
+    Returns:
+        - hits: Total cache hits
+        - misses: Total cache misses
+        - total_requests: Total requests (hits + misses)
+        - hit_rate_percent: Cache hit rate as percentage
+        - avg_compute_time_ms: Average compute time in milliseconds
+    """
+    stats = get_cache_stats()
+    return JSONResponse(ok(request, stats), status_code=200)
