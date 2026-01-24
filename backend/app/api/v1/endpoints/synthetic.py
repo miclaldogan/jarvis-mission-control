@@ -12,7 +12,7 @@ from redis.asyncio import Redis
 
 from app.cache import cache_key_synthetic_tasks, get_json, set_json
 from app.http_envelope import err, ok
-from app.metrics import inc_cache_hit, inc_cache_miss, inc_synthetic_generated
+from app.metrics import inc_cache_hit, inc_cache_miss, inc_synthetic_generated, record_compute_time
 from app.rate_limit import fixed_window_allow, synthetic_client_id, synthetic_rate_limit_key
 from app.settings import get_settings
 
@@ -30,16 +30,107 @@ def _preview_hash(n: int, seed: int, sample: list[dict]) -> str:
 
 
 def _make_sample(n: int, seed: int, sample_size: int = 50) -> list[dict]:
+    """Generate realistic synthetic tasks with deterministic randomness."""
     rng = random.Random(seed)
-    priorities = ["P1", "P2", "P3", "P4"]
+    
+    # Categories and templates for realistic tasks
+    categories = ["SYSTEM", "RECON", "DEV", "PERSONAL", "HEALTH", "LEARNING", "WORK"]
+    priorities = ["CRITICAL", "HIGH", "NORMAL", "LOW"]
+    energy_levels = ["low", "medium", "high"]
+    
+    templates = {
+        "SYSTEM": [
+            "Update {} dependencies",
+            "Patch security vulnerability in {}",
+            "Monitor {} performance",
+            "Configure {} firewall rules",
+            "Backup {} database",
+        ],
+        "RECON": [
+            "Research {} competitors",
+            "Analyze {} market trends",
+            "Survey {} user feedback",
+            "Review {} documentation",
+            "Investigate {} incident",
+        ],
+        "DEV": [
+            "Fix bug #{}",
+            "Implement feature #{}",
+            "Review PR #{}",
+            "Refactor {} module",
+            "Write tests for {}",
+            "Deploy {} to staging",
+            "Debug {} performance issue",
+        ],
+        "PERSONAL": [
+            "Call {} about {}",
+            "Buy {} from {}",
+            "Plan {} trip",
+            "Schedule {} appointment",
+            "Organize {} files",
+        ],
+        "HEALTH": [
+            "Morning {} workout",
+            "Prepare {} meal",
+            "Take {} break",
+            "Stretch for {} minutes",
+            "Drink {} glasses of water",
+        ],
+        "LEARNING": [
+            "Read chapter {} of {}",
+            "Complete {} course module",
+            "Practice {} for {} minutes",
+            "Watch {} tutorial",
+            "Study {} concepts",
+        ],
+        "WORK": [
+            "Attend {} meeting",
+            "Write {} report",
+            "Send {} email",
+            "Update {} spreadsheet",
+            "Prepare {} presentation",
+        ],
+    }
+    
+    # Names/subjects for templates
+    subjects = [
+        "frontend", "backend", "API", "database", "cache", "auth", "UI", "UX",
+        "security", "payment", "notification", "search", "analytics", "logging",
+        "John", "Sarah", "team", "client", "manager", "vendor",
+        "quarterly", "monthly", "weekly", "daily", "annual",
+    ]
+    
     size = min(sample_size, n)
     out: list[dict] = []
+    
     for i in range(1, size + 1):
+        category = rng.choice(categories)
+        template = rng.choice(templates[category])
+        
+        # Fill template with random subjects or numbers
+        placeholders = template.count("{}")
+        if placeholders == 2:
+            title = template.format(rng.choice(subjects), rng.choice(subjects))
+        elif placeholders == 1:
+            if "#" in template or "minutes" in template or "glasses" in template or "chapter" in template:
+                title = template.format(rng.randint(1, 100))
+            else:
+                title = template.format(rng.choice(subjects))
+        else:
+            title = template
+        
+        # Deterministic deadline (0-7 days from seed base)
+        deadline_days = rng.randint(0, 7)
+        
         out.append(
             {
                 "id": f"tsk_{i:06d}",
-                "title": f"Synthetic task #{i}",
+                "title": title,
+                "category": category,
                 "priority": rng.choice(priorities),
+                "energy_cost": rng.choice(energy_levels),
+                "deadline_days": deadline_days,
+                "score": round(rng.random(), 2),
             }
         )
     return out
@@ -142,5 +233,6 @@ async def synthetic_tasks(
 
     compute_ms = int((time.perf_counter() - start) * 1000)
     response.headers["X-Compute-Time-ms"] = str(compute_ms)
+    record_compute_time(compute_ms)
 
     return response
