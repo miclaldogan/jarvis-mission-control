@@ -217,3 +217,127 @@
 ---
 
 **🚀 Hedef:** "3 kişi bu kadar mı?" eleştirisini bitirmek!
+
+---
+
+## 🎯 YENİ EKLENEN GÖREVLER (WOW Paketi Tamamlama)
+
+### WOW-1: Mission Run + Compare ✅
+**Backend:** #102 (İclal) - Mission Run Lifecycle
+**Frontend:** #109 (Burcu) - Run History UI + Compare
+**Enhancement:** #115 (Burcu) - Run Badge & Dashboard Header
+
+### WOW-2: Task Explainability ✅
+**Backend:** #99 (İclal) - Task Detail API + #100 (İclal) - Score Breakdown
+**Frontend:** #107 (Burcu) - Task Detail Modal with Breakdown
+**Audit:** #103 (İclal) - Audit Log System
+
+### WOW-3: Scenario Simulator ✅
+**Backend:** #116 (İclal) - Scenario Simulation API
+**Frontend:** #108 (Burcu) - Simulation Lab UI
+**EPIC:** #98 - EPIC-B (Scenario Simulator)
+
+### System Harmonics (Hoca Etkileyen) ✅
+**Backend:** #118 (İclal) - Context Freshness & Anomaly Detection
+**Frontend:** #114 (Burcu) - Context Health UI Component
+**Base:** #101 (İclal) - Multi-Source Context Ingestion
+
+### Cache Proof (Kriter-3 Kanıtı) ✅
+**Backend:** #117 (Merve) - Make MISS Visibly Slow (1-3s)
+**Backend:** #105 (Merve) - Heavy Report Endpoints
+**Frontend:** #106 (Merve) - Cache Evidence Badges
+
+---
+
+## 📊 GÜNCEL İSTATİSTİKLER
+
+**Toplam Issue:** 22 (2 EPIC + 20 Implementation)
+
+**İclal (Backend Lead):** 7 task
+- 5 original (core backend)
+- 2 new (scenario API + context health)
+- **En zor:** #100 (Explainability), #102 (Run Lifecycle)
+
+**Merve (Cache/Synthetic):** 4 task
+- 3 original (synthetic + reports + UI)
+- 1 new (cache optimization)
+- **Kritik:** #117 (MISS slow), #105 (Heavy reports)
+
+**Burcu (Frontend UX):** 6 task
+- 4 original (detail modal + simulation + run history + dashboard)
+- 2 new (run badge + context health UI)
+- **WOW:** #108 (Simulation UI), #114 (System Harmonics)
+
+**Sprint Tasks (Tüm Ekip):** 3 task
+- #111 (Sprint 1 - Demo blockers)
+- #112 (Sprint 3 - Observability)
+- #113 (Sprint 3 - Demo script)
+
+---
+
+## 🎬 75 SANİYELİK DEMO AKIŞI (Güncellenmiş)
+
+```
+[0:00-0:10] Global Context Page
+            → System Harmonics dolu (#114)
+            → 4 kaynak online, freshness göstergeleri
+            → Anomaly: "GitHub issues spike: 15 → 23"
+
+[0:10-0:20] Dashboard Header
+            → RUN #15 badge (#115)
+            → Context: 3m ago (fresh)
+            → "GENERATE RUN" butonuna bas
+
+[0:20-0:30] Task List
+            → 12 görev geldi (#110)
+            → Her kartda: priority bar + reason chips
+            → Task'a tıkla → Details açıldı (#107)
+
+[0:30-0:40] Task Details Panel
+            → Score breakdown (#100): deadline(0.42) + context(0.31)...
+            → Audit timeline (#103): "Run#14'te eklendi"
+            → Reason chips: "rain", "github_issues_high"
+
+[0:40-0:50] Simulation Lab
+            → Toggle: sunny → rainy (#116, #108)
+            → "Apply scenario" → Run #16 oluştu
+            → Diff view: 3 görev gitti, 5 görev eklendi
+
+[0:50-1:00] Cache Proof
+            → Heavy report (#117)
+            → First call: MISS 2100ms (#106 badge)
+            → Second call: HIT 25ms
+            → 80x speedup visible!
+
+[1:00-1:15] Run History
+            → Run timeline (#109)
+            → Compare Run #16 vs #15
+            → Context farkı + görev farkı açık
+```
+
+**Hoca Reaction:** "Bu basit to-do değil, kontrol edilebilir sistem + simulation lab!"
+
+---
+
+## ✅ TAMAMLANMA CHECKPOINT'LERİ
+
+### Sprint 1 Sonu:
+- [ ] Task details açılıyor ve score breakdown görünüyor
+- [ ] Dashboard run badge + context age gösteriyor
+- [ ] Cache MISS/HIT farkı bariz (2s vs 20ms)
+
+### Sprint 2 Sonu:
+- [ ] Simulation toggle'ları çalışıyor
+- [ ] Diff view görevleri karşılaştırıyor
+- [ ] Run history + compare feature çalışıyor
+- [ ] System Harmonics dolu ve canlı
+
+### Sprint 3 Sonu:
+- [ ] 75 saniyelik demo script hazır
+- [ ] Observability (logs, metrics, health check)
+- [ ] Production deployment (Docker + SSL)
+
+---
+
+**🔗 GitHub:** https://github.com/miclaldogan/jarvis-mission-control/issues
+**🚀 Son Güncelleme:** 5 yeni issue eklendi (WOW paketi tamamlandı)
