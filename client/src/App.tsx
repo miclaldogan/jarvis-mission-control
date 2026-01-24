@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Context from "@/pages/Context";
 import Lab from "@/pages/Lab";
+import SimulationLab from "@/pages/SimulationLab";
 
 function Router() {
   return (
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/context" component={Context} />
       <Route path="/lab" component={Lab} />
+      <Route path="/simulation" component={SimulationLab} />
       <Route component={NotFound} />
     </Switch>
   );
