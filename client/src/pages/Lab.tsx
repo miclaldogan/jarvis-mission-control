@@ -42,7 +42,7 @@ export default function Lab() {
     // Simulate some delay before hitting API
     setTimeout(() => {
       addLog("Sending bulk create request...");
-      bulkCreate.mutate(50, { // create 50 tasks
+      bulkCreate.mutate(100000, { // create 100k tasks
         onSuccess: (data) => {
           addLog(`SUCCESS: ${data.message}`);
           addLog(`Generated ${data.count} new mission protocols.`);

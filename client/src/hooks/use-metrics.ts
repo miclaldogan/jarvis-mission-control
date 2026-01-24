@@ -15,12 +15,12 @@ interface FastAPIMetrics {
   http_requests_total: number;
 }
 
-// GET /api/v1/metrics - Transform to SystemMetric format
+// GET /metrics - Transform to SystemMetric format
 export function useMetrics() {
   return useQuery({
     queryKey: ["metrics"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/v1/metrics`);
+      const res = await fetch(`${API_BASE}/metrics`);
       if (!res.ok) throw new Error("Failed to fetch metrics");
       const text = await res.text();
       
@@ -33,9 +33,9 @@ export function useMetrics() {
       let computeTime = 0;
       
       for (const line of lines) {
-        if (line.includes("cache_hit_total")) {
+        if (line.includes("cache_hits_total")) {
           cacheHit = parseFloat(line.split(" ")[1] || "0");
-        } else if (line.includes("cache_miss_total")) {
+        } else if (line.includes("cache_misses_total")) {
           cacheMiss = parseFloat(line.split(" ")[1] || "0");
         } else if (line.includes("http_request_duration_seconds_sum")) {
           computeTime = parseFloat(line.split(" ")[1] || "0") * 1000; // to ms
