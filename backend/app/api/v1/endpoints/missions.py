@@ -119,8 +119,26 @@ async def missions_generate(request: Request, body: MissionsGenerateRequest):
     # Store generated missions in memory
     for mission in missions:
         storage.store_mission(mission)
+    
+    # Create a mission run record
+    run_id = f"run_{uuid.uuid4().hex[:12]}"
+    generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    
+    run_record = {
+        "run_id": run_id,
+        "generated_at": generated_at,
+        "context_id": context.get("context_id"),
+        "context_observed_at": context.get("observed_at") or context.get("fetched_at"),
+        "mission_ids": [m["id"] for m in missions],
+        "mission_count": len(missions),
+        "preferences": body.preferences.model_dump() if body.preferences else None,
+        "context_snapshot": context,  # Store full context for comparison
+    }
+    
+    storage.store_run(run_record)
 
     data = {
+        "run_id": run_id,
         "context": {
             "context_id": context.get("context_id"),
             "observed_at": context.get("observed_at") or context.get("fetched_at"),
@@ -129,6 +147,71 @@ async def missions_generate(request: Request, body: MissionsGenerateRequest):
     }
 
     response = JSONResponse(ok(request, data), status_code=200)
+    compute_ms = int((time.perf_counter() - start) * 1000)
+    response.headers["X-Compute-Time-ms"] = str(compute_ms)
+    return response
+
+
+@router.get("/missions/runs")
+async def list_mission_runs(request: Request, limit: int = 50):
+    """
+    List all mission runs, most recent first.
+    
+    A "run" is created each time /missions/generate is called.
+    It captures: which missions were generated, what context was used,
+    and what preferences were applied.
+    
+    Useful for:
+    - Showing "generation history" in UI
+    - Comparing how missions changed between runs
+    - Debugging why certain missions were generated
+    """
+    start = time.perf_counter()
+    
+    runs = storage.get_all_runs(limit=min(limit, 100))
+    
+    data = {
+        "runs": runs,
+        "total": len(runs),
+    }
+    
+    response = JSONResponse(ok(request, data), status_code=200)
+    compute_ms = int((time.perf_counter() - start) * 1000)
+    response.headers["X-Compute-Time-ms"] = str(compute_ms)
+    return response
+
+
+@router.get("/missions/runs/{run_id}")
+async def get_mission_run(request: Request, run_id: str):
+    """
+    Get details for a specific mission run.
+    
+    Returns:
+    - Run metadata (run_id, generated_at, context_id)
+    - Full context snapshot used for generation
+    - List of missions generated in this run
+    - Preferences applied (if any)
+    """
+    start = time.perf_counter()
+    
+    run = storage.get_run(run_id)
+    if not run:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": {
+                    "code": "RUN_NOT_FOUND",
+                    "message": f"Run with ID '{run_id}' does not exist",
+                },
+                "meta": {
+                    "request_id": request.headers.get("X-Request-ID", "unknown"),
+                    "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                },
+            },
+            status_code=404,
+        )
+    
+    response = JSONResponse(ok(request, run), status_code=200)
     compute_ms = int((time.perf_counter() - start) * 1000)
     response.headers["X-Compute-Time-ms"] = str(compute_ms)
     return response
@@ -310,3 +393,4 @@ async def get_mission_audit_log(request: Request, mission_id: str):
     compute_ms = int((time.perf_counter() - start) * 1000)
     response.headers["X-Compute-Time-ms"] = str(compute_ms)
     return response
+
