@@ -26,6 +26,7 @@ from typing import Any, Optional
 
 from app.services.signal_engine import Signal, SignalType, SignalSeverity, get_signal_engine
 from app.services.rule_engine import Rule, Action, ActionType, RuleResult, get_rule_engine
+from app.services import storage  # Import storage for DB persistence
 
 
 class SystemState(str, Enum):
@@ -274,6 +275,9 @@ class MissionOrchestrator:
             if mission and not self._is_duplicate(mission):
                 self._pending_missions.append(mission)
                 new_missions.append(mission)
+                
+                # ✅ Persist to storage (DB)
+                self._persist_mission(mission)
         
         # Step 4: Update metrics
         self._metrics.task_count = len(self._pending_missions)
@@ -394,6 +398,39 @@ class MissionOrchestrator:
         signal_boost = min(0.1, len(rule_result.signals_matched) * 0.03)
         
         return min(1.0, base + severity_boost + signal_boost)
+    
+    def _persist_mission(self, mission: AutoMission) -> None:
+        """Persist a mission to storage (DB)."""
+        try:
+            storage.store_mission({
+                "id": mission.id,
+                "title": mission.title,
+                "priority": mission.priority,
+                "status": "open",
+                "tags": mission.tags,
+                "why": mission.why,
+                "created_at": mission.created_at,
+                "updated_at": mission.created_at,
+                "evidence": {
+                    "auto_generated": True,
+                    "source_rule_id": mission.source_rule_id,
+                    "source_rule_name": mission.source_rule_name,
+                    "trigger_signals": mission.trigger_signals,
+                    "system_state": mission.system_state.value,
+                },
+                "priority_score": mission.confidence,
+                "score_breakdown": {
+                    "confidence": mission.confidence,
+                    "category": mission.category,
+                    "energy_cost": mission.energy_cost,
+                    "duration_minutes": mission.duration_minutes,
+                },
+                "reasons": [step.get("description", step.get("reason", "")) for step in mission.decision_chain if step.get("description") or step.get("reason")],
+            })
+        except Exception as e:
+            # Log but don't fail the mission generation
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to persist mission {mission.id}: {e}")
     
     def _is_duplicate(self, new_mission: AutoMission) -> bool:
         """Check if a similar mission already exists."""

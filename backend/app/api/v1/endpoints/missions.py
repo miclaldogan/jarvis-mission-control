@@ -69,6 +69,25 @@ class MissionsGenerateRequest(BaseModel):
     seed: Optional[int] = None
 
 
+@router.get("/missions")
+async def list_missions(request: Request, limit: int = 50):
+    """
+    Get all missions from storage.
+    
+    Returns persisted missions including auto-generated brain missions.
+    """
+    missions = storage.get_all_missions()
+    
+    # Sort by created_at descending (newest first)
+    missions.sort(key=lambda m: m.get("created_at", ""), reverse=True)
+    
+    return ok(request, {
+        "missions": missions[:limit],
+        "count": len(missions),
+        "total": len(missions),
+    })
+
+
 @router.post("/missions")
 async def create_mission(request: Request, body: CreateMissionRequest):
     """
