@@ -394,18 +394,34 @@ export default function Context() {
       {/* Source Status Footer */}
       {context && (
         <div className="mt-8 grid grid-cols-3 gap-4 text-xs font-mono">
+          {(() => {
+            const displaySource = (source: string) => {
+              // Avoid confusion with the "NETWORK TRAFFIC" chart (system vitals).
+              if (source === 'traffic') return 'commute';
+              return source;
+            };
+
+            return (
           <div className="p-4 bg-accent/10 border border-accent/20 rounded">
             <div className="text-accent font-bold mb-2">SOURCES ONLINE: {context.sources_ok?.length || 0}</div>
-            <div className="text-muted-foreground">{context.sources_ok?.join(', ') || 'None'}</div>
+            <div className="text-muted-foreground">
+              {context.sources_ok?.map(displaySource).join(', ') || 'None'}
+            </div>
           </div>
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded">
             <div className="text-destructive font-bold mb-2">SOURCES FAILED: {context.sources_failed?.length || 0}</div>
-            <div className="text-muted-foreground">{context.sources_failed?.map(f => f.source).join(', ') || 'None'}</div>
+            <div className="text-muted-foreground">
+              {context.sources_failed?.map(f => displaySource(f.source)).join(', ') || 'None'}
+            </div>
           </div>
           <div className="p-4 bg-secondary/10 border border-secondary/20 rounded">
             <div className="text-secondary font-bold mb-2">SOURCES SKIPPED: {context.sources_skipped?.length || 0}</div>
-            <div className="text-muted-foreground">{context.sources_skipped?.map(s => s.source).join(', ') || 'None'}</div>
+            <div className="text-muted-foreground">
+              {context.sources_skipped?.map(s => displaySource(s.source)).join(', ') || 'None'}
+            </div>
           </div>
+            );
+          })()}
         </div>
       )}
     </Layout>
