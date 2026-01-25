@@ -61,21 +61,25 @@ async def get_context(
         if cached is not None:
             data = cached.get("data")
 
-            # If cached snapshot is missing GitHub even though config exists,
-            # treat it as stale and rebuild so the UI doesn't require a manual refresh.
+            # If cached snapshot has a bad GitHub state (missing or marked failed/stale)
+            # even though GitHub is configured, treat it as stale and rebuild so the UI
+            # doesn't require a manual refresh (e.g., after adding GITHUB_TOKEN).
             github_configured = bool(os.getenv("GITHUB_OWNER")) and bool(os.getenv("GITHUB_REPO"))
-            if github_configured and (data is not None) and (data.get("github") is None):
-                sources_failed = data.get("sources_failed") or []
-                sources_skipped = data.get("sources_skipped") or []
-                github_marked = any(
-                    isinstance(item, dict) and item.get("source") == "github" for item in sources_failed
-                ) or any(isinstance(item, dict) and item.get("source") == "github" for item in sources_skipped)
+            if github_configured and (data is not None):
+                github_payload = data.get("github")
+                github_status = github_payload.get("status") if isinstance(github_payload, dict) else None
 
-                # Only bypass the cache if we know GitHub was actually attempted and
-                # recorded as failed/skipped. This avoids defeating caching when the
-                # snapshot simply doesn't include GitHub data (e.g., deterministic tests).
-                if github_marked:
-                    cached = None
+                if github_payload is None or github_status in ("failed", "stale"):
+                    sources_failed = data.get("sources_failed") or []
+                    sources_skipped = data.get("sources_skipped") or []
+                    github_marked = any(
+                        isinstance(item, dict) and item.get("source") == "github" for item in sources_failed
+                    ) or any(
+                        isinstance(item, dict) and item.get("source") == "github" for item in sources_skipped
+                    ) or (github_status in ("failed", "stale"))
+
+                    if github_marked:
+                        cached = None
 
             if cached is not None:
                 inc_cache_hit()
