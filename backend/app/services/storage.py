@@ -147,6 +147,19 @@ def update_mission_status(mission_id: str, new_status: str, reason: str = "") ->
     old_status = mission.get("status")
     mission["status"] = new_status
     mission["updated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    # Persist to SQLite
+    try:
+        _ensure_db()
+        conn = get_db()
+        conn.execute(
+            "UPDATE missions SET status = ?, updated_at = ? WHERE id = ?",
+            (mission["status"], mission["updated_at"], mission_id),
+        )
+        conn.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to persist mission status to DB: {e}")
     
     add_history_event(
         mission_id=mission_id,
@@ -155,6 +168,34 @@ def update_mission_status(mission_id: str, new_status: str, reason: str = "") ->
         data={"old_status": old_status, "new_status": new_status},
     )
     
+    return True
+
+
+def delete_mission(mission_id: str, reason: str = "") -> bool:
+    """Delete a mission from cache and SQLite."""
+    if mission_id not in _missions:
+        return False
+
+    # Remove from memory cache
+    _missions.pop(mission_id, None)
+
+    # Persist delete to SQLite
+    try:
+        _ensure_db()
+        conn = get_db()
+        conn.execute("DELETE FROM missions WHERE id = ?", (mission_id,))
+        conn.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to delete mission from DB: {e}")
+
+    add_history_event(
+        mission_id=mission_id,
+        event_type="deleted",
+        reason=reason or "Mission deleted",
+        data={},
+    )
+
     return True
 
 

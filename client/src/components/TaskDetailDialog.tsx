@@ -39,9 +39,10 @@ interface TaskDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStatusChange?: (missionId: string, newStatus: string) => void;
+  onDelete?: (missionId: string) => void;
 }
 
-export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange, onDelete }: TaskDetailDialogProps) {
   if (!mission) return null;
 
   const priorityColors = {
@@ -80,6 +81,12 @@ export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange }
   const handleStatusChange = (newStatus: string) => {
     if (onStatusChange) {
       onStatusChange(mission.id, newStatus);
+    }
+  };
+
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(mission.id);
     }
   };
 
@@ -243,6 +250,16 @@ export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange }
             >
               <XCircle className="w-4 h-4 mr-2" />
               Mark Failed
+            </Button>
+
+            <div className="flex-1" />
+
+            <Button
+              onClick={handleDelete}
+              variant="outline"
+              className="border-destructive/50 hover:bg-destructive/10 text-destructive"
+            >
+              Delete
             </Button>
           </div>
         </div>

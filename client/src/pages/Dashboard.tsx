@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useMissions, useCreateMission, useGenerateRun, getCurrentRun } from "@/hooks/use-missions";
+import { useMissions, useCreateMission, useGenerateRun, useUpdateMissionStatus, useDeleteMission, getCurrentRun } from "@/hooks/use-missions";
 import { useMetrics, useRedisHealth } from "@/hooks/use-metrics";
 import { useSystemVitals } from "@/hooks/use-system-vitals";
 import { CyberCard } from "@/components/CyberCard";
@@ -80,7 +80,7 @@ export default function Dashboard() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   
   // About section toggle
-  const [showAbout, setShowAbout] = useState(false);
+  const [showAbout, setShowAbout] = useState(true);
   
   // Filter state
   const [category, setCategory] = useState<FilterCategory>("all");
@@ -113,9 +113,11 @@ export default function Dashboard() {
   });
 
   const createMission = useCreateMission();
+  const updateMissionStatus = useUpdateMissionStatus();
+  const deleteMission = useDeleteMission();
 
   const onSubmit = (data: InsertMission) => {
-    createMission.mutate(data, {
+    createMission.mutate(data as any, {
       onSuccess: () => {
         setIsDialogOpen(false);
         form.reset();
@@ -247,13 +249,11 @@ export default function Dashboard() {
   };
 
   const handleStartMission = (mission: any) => {
-    // TODO: Call API to update mission status
-    console.log("Starting mission:", mission.id);
+    updateMissionStatus.mutate({ missionId: String(mission.id), newStatus: "IN_PROGRESS" });
   };
 
   const handleCompleteMission = (mission: any) => {
-    // TODO: Call API to update mission status
-    console.log("Completing mission:", mission.id);
+    updateMissionStatus.mutate({ missionId: String(mission.id), newStatus: "COMPLETED" });
   };
 
   return (
@@ -600,6 +600,17 @@ export default function Dashboard() {
         mission={selectedMission}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
+        onStatusChange={(missionId, newStatus) => {
+          updateMissionStatus.mutate({ missionId: String(missionId), newStatus });
+        }}
+        onDelete={(missionId) => {
+          deleteMission.mutate(String(missionId), {
+            onSuccess: () => {
+              setIsDetailOpen(false);
+              setSelectedMission(null);
+            },
+          });
+        }}
       />
     </Layout>
   );

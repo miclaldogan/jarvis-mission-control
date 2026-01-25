@@ -2,6 +2,33 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
+function toUiStatus(status: string | undefined): Status {
+  const s = (status || "").toLowerCase();
+  if (s === "open") return "PENDING";
+  if (s === "in_progress") return "IN_PROGRESS";
+  if (s === "done") return "COMPLETED";
+  if (s === "cancelled") return "FAILED";
+  return (status as Status) || "PENDING";
+}
+
+function toApiStatus(uiStatus: string): string {
+  const up = (uiStatus || "").toUpperCase();
+  if (up === "PENDING") return "open";
+  if (up === "IN_PROGRESS") return "in_progress";
+  if (up === "COMPLETED") return "done";
+  if (up === "FAILED") return "cancelled";
+  return uiStatus;
+}
+
+function toUiPriority(priority: string | undefined): Priority {
+  const up = (priority || "").toUpperCase();
+  if (up === "P1") return "CRITICAL";
+  if (up === "P2") return "HIGH";
+  if (up === "P3") return "NORMAL";
+  if (up === "P4") return "LOW";
+  return (priority as Priority) || "NORMAL";
+}
+
 // Type definitions matching backend response
 type Priority = "CRITICAL" | "HIGH" | "NORMAL" | "LOW" | "P1" | "P2" | "P3" | "P4";
 type Category = "SYSTEM" | "RECON" | "ENCRYPTION" | "DEFENSE";
@@ -81,12 +108,12 @@ export function useMissions() {
         return {
           id: m.id,
           title: m.title,
-          priority: m.priority,
+          priority: toUiPriority(m.priority),
           priority_score: m.priority_score,
           score_breakdown: m.score_breakdown,
           reasons: m.reasons || m.score_breakdown?.reasons,
           category: m.category || categories[idx % 4],
-          status: m.status || "open",
+          status: toUiStatus(m.status),
           tags: m.tags || [],
           why: m.why,
           due_at: m.due_at,
@@ -100,6 +127,39 @@ export function useMissions() {
       });
     },
     staleTime: 30000, // 30 seconds - don't refetch constantly
+  });
+}
+
+export function useUpdateMissionStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { missionId: string; newStatus: string; reason?: string }) => {
+      const res = await fetch(`${API_BASE}/api/v1/missions/${encodeURIComponent(params.missionId)}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: toApiStatus(params.newStatus),
+          reason: params.reason || "UI action",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update mission status");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["missions-today"] }),
+  });
+}
+
+export function useDeleteMission() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (missionId: string) => {
+      const res = await fetch(`${API_BASE}/api/v1/missions/${encodeURIComponent(missionId)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete mission");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["missions-today"] }),
   });
 }
 

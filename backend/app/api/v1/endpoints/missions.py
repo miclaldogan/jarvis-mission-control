@@ -128,16 +128,84 @@ async def create_mission(request: Request, body: CreateMissionRequest):
         status=body.status,
         created_at=datetime.now(timezone.utc).isoformat()
     )
+
+    # Provide a lightweight score for manually-created missions so the UI can render
+    # meaningful values even without full context-based scoring.
+    priority_score_map = {
+        Priority.CRITICAL: 90.0,
+        Priority.HIGH: 70.0,
+        Priority.NORMAL: 50.0,
+        Priority.LOW: 30.0,
+    }
+    ui_score = float(priority_score_map.get(body.priority, 50.0))
+    score_breakdown = {
+        "deadline": 0.0,
+        "context": 0.0,
+        "energy": 0.0,
+        "preference": 0.0,
+        "base": ui_score,
+    }
+    reasons = [f"Manual mission created (priority={body.priority})"]
     
     # Store in hybrid storage (SQLite + in-memory cache)
     # Keep the response schema unchanged for the UI/tests.
+    # Normalize persisted values so they are compatible with the DB schema and /missions/today logic.
     try:
-        storage.store_mission(mission.model_dump())
+        persisted = mission.model_dump()
+
+        priority_map = {
+            "CRITICAL": "P1",
+            "HIGH": "P2",
+            "NORMAL": "P3",
+            "LOW": "P4",
+        }
+        status_map = {
+            "PENDING": "open",
+            "IN_PROGRESS": "in_progress",
+            "COMPLETED": "done",
+            "FAILED": "cancelled",
+        }
+
+        persisted["priority"] = priority_map.get(str(persisted.get("priority")), persisted.get("priority"))
+        persisted["status"] = status_map.get(str(persisted.get("status")), persisted.get("status"))
+
+        persisted["priority_score"] = ui_score
+        persisted["score_breakdown"] = score_breakdown
+        persisted["reasons"] = reasons
+
+        storage.store_mission(persisted)
     except Exception:
         # Storage is best-effort here; creation still succeeds.
         pass
     
     response = JSONResponse(ok(request, mission.model_dump()), status_code=201)
+    compute_ms = int((time.perf_counter() - start) * 1000)
+    response.headers["X-Compute-Time-ms"] = str(compute_ms)
+    return response
+
+
+@router.delete("/missions/{mission_id}")
+async def delete_mission(request: Request, mission_id: str):
+    start = time.perf_counter()
+
+    success = storage.delete_mission(mission_id, reason="Deleted via API")
+    if not success:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": {
+                    "code": "MISSION_NOT_FOUND",
+                    "message": f"Mission with ID '{mission_id}' does not exist",
+                },
+                "meta": {
+                    "request_id": request.headers.get("X-Request-ID", "unknown"),
+                    "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                },
+            },
+            status_code=404,
+        )
+
+    response = JSONResponse(ok(request, {"deleted": True, "mission_id": mission_id}), status_code=200)
     compute_ms = int((time.perf_counter() - start) * 1000)
     response.headers["X-Compute-Time-ms"] = str(compute_ms)
     return response
