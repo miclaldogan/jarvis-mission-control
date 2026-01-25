@@ -121,6 +121,17 @@ async def build_context_snapshot(
             data["sources_ok"].append("github")
             data["freshness"]["github_updated_at"] = fetch_time
         except Exception as e:
+            # UI expectation: show the configured repo immediately on first load.
+            # Even if GitHub ingestion fails (rate limit/network), return a minimal
+            # object so the repo/link is visible while still reporting the failure.
+            data["github"] = {
+                "owner": os.getenv("GITHUB_OWNER"),
+                "repo": os.getenv("GITHUB_REPO"),
+                "open_issues": 0,
+                "open_prs": 0,
+                "status": "failed",
+                "error": str(e),
+            }
             data["sources_failed"].append({"source": "github", "error": str(e)})
 
     # News (Hacker News via Algolia)
