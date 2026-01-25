@@ -18,6 +18,10 @@ from app.services.context import build_context_snapshot
 router = APIRouter()
 
 
+_LAST_GOOD_GITHUB_KEY = "cache:v1:context:github:last_good"
+_LAST_GOOD_GITHUB_TTL_SECONDS = 24 * 60 * 60
+
+
 def _context_cache_key(request: Request) -> str:
     items = sorted([(k, v) for (k, v) in request.query_params.multi_items() if k != "refresh"])
     if items:
@@ -89,6 +93,37 @@ async def get_context(
     # If user explicitly refreshes, use a more dynamic news feed to make changes visible.
     news_mode = "latest" if refresh else "front_page"
     data = await build_context_snapshot(debug=debug, city=city, news_mode=news_mode)
+
+    # If GitHub is currently failing (rate-limit/network), try to keep the UI useful
+    # by reusing the last successful GitHub counts from Redis.
+    github_configured = bool(os.getenv("GITHUB_OWNER")) and bool(os.getenv("GITHUB_REPO"))
+    if (redis is not None) and github_configured:
+        sources_ok = data.get("sources_ok") or []
+        sources_failed = data.get("sources_failed") or []
+
+        github_ok = "github" in sources_ok
+        github_failed = any(
+            isinstance(item, dict) and item.get("source") == "github" for item in sources_failed
+        )
+
+        if github_ok and isinstance(data.get("github"), dict):
+            await set_json(
+                redis,
+                _LAST_GOOD_GITHUB_KEY,
+                {"github": data.get("github"), "saved_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")},
+                ttl_seconds=_LAST_GOOD_GITHUB_TTL_SECONDS,
+            )
+        elif github_failed and isinstance(data.get("github"), dict):
+            last_good = await get_json(redis, _LAST_GOOD_GITHUB_KEY)
+            last_github = (last_good or {}).get("github") if isinstance(last_good, dict) else None
+            if isinstance(last_github, dict):
+                merged = dict(data.get("github") or {})
+                for field in ("open_issues", "open_prs"):
+                    if isinstance(last_github.get(field), int):
+                        merged[field] = last_github.get(field)
+                merged["status"] = "stale"
+                merged["stale_from"] = (last_good or {}).get("saved_at")
+                data["github"] = merged
 
     # All failed -> 502 (do NOT cache failures)
     if len(data.get("sources_ok") or []) == 0:
