@@ -4,6 +4,7 @@ from app.api.v1.endpoints import context, health, missions, report, simulation, 
 from app.api.v1.endpoints import system
 from app.api.v1.endpoints import persistence
 from app.api.v1.endpoints import harmonics
+from app.api.v1.endpoints import brain
 
 api_router = APIRouter()
 
@@ -18,3 +19,4 @@ api_router.include_router(report.router, tags=["report"])
 
 api_router.include_router(system.router, tags=['system'])
 api_router.include_router(harmonics.router, tags=['harmonics'])
+api_router.include_router(brain.router, tags=['brain'])
