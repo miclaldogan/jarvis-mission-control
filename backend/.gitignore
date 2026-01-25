@@ -1,5 +1,6 @@
 ﻿*.bak_*
 requirements.txt.bak_*
 context_snapshot.json
+.env
 Remove-Item
 cd

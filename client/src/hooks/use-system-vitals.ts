@@ -38,13 +38,18 @@ function toUiVitals(json: Envelope<any>): SystemVitals {
 
   const d = json.data;
 
+  // Backend returns percentage values as cpu/memory/disk (0-100).
+  const cpu = Number(d?.cpu ?? 0);
+  const memory = Number(d?.memory ?? 0);
+  const disk = Number(d?.disk ?? 0);
+
   return {
-    cpu: Number(d?.cpu ?? 0),
-    cpu_percent: Number(d?.cpu ?? 0),
-    memory: Number(d?.memory ?? 0),
-    memory_percent: Number(d?.memory ?? 0),
-    disk: Number(d?.disk ?? 0),
-    disk_percent: Number(d?.disk ?? 0),
+    cpu,
+    cpu_percent: cpu,
+    memory,
+    memory_percent: memory,
+    disk,
+    disk_percent: disk,
     network: Number(d?.network ?? 0),
     network_sent_mbps: Number(d?.network_mb_sent ?? 0),
     network_recv_mbps: Number(d?.network_mb_recv ?? 0),

@@ -78,12 +78,17 @@ export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange, 
     return values.every((v) => v >= 0 && v <= 1.5);
   })();
 
-  const scoreItems: Array<{ key: string; label: string; icon: any; color: string }> = [
+  const displayTotalScore =
+    breakdownLooksFractional && totalScore <= 1.5
+      ? `${(totalScore * 100).toFixed(0)}%`
+      : totalScore.toFixed(2);
+
+  const scoreItems: Array<{ key: string; label: string; icon: any; color: string; weight?: number }> = [
     { key: "base", label: "Base Score", icon: Target, color: "text-primary" },
-    { key: "deadline", label: "Deadline Urgency", icon: Clock, color: "text-red-400" },
-    { key: "context", label: "Context Relevance", icon: Target, color: "text-blue-400" },
-    { key: "energy", label: "Energy Level", icon: Zap, color: "text-yellow-400" },
-    { key: "preference", label: "User Preference", icon: Calendar, color: "text-green-400" },
+    { key: "deadline", label: "Deadline Urgency", icon: Clock, color: "text-red-400", weight: 0.4 },
+    { key: "context", label: "Context Relevance", icon: Target, color: "text-blue-400", weight: 0.3 },
+    { key: "energy", label: "Energy Level", icon: Zap, color: "text-yellow-400", weight: 0.2 },
+    { key: "preference", label: "User Preference", icon: Calendar, color: "text-green-400", weight: 0.1 },
     { key: "routine", label: "Routine Match", icon: Zap, color: "text-secondary" },
   ];
 
@@ -134,7 +139,7 @@ export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange, 
             <div className="bg-white/5 border border-primary/10 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-muted-foreground uppercase">Total Score</span>
-                <span className="text-xl font-bold text-primary">{totalScore.toFixed(3)}</span>
+                <span className="text-xl font-bold text-primary">{displayTotalScore}</span>
               </div>
               
               <Separator className="bg-primary/20" />
@@ -150,6 +155,7 @@ export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange, 
                       value={breakdown[item.key]}
                       total={totalScore}
                       fractional={breakdownLooksFractional}
+                      weight={item.weight}
                       color={item.color}
                     />
                   ))}
@@ -292,16 +298,24 @@ interface ScoreBarProps {
   value: number;
   total: number;
   fractional: boolean;
+  weight?: number;
   color: string;
 }
 
-function ScoreBar({ label, icon: Icon, value, total, fractional, color }: ScoreBarProps) {
+function ScoreBar({ label, icon: Icon, value, total, fractional, weight, color }: ScoreBarProps) {
   // Safely handle undefined/NaN values
   const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
-  const pct = fractional
-    ? safeValue * 100
-    : (total > 0 ? (safeValue / total) * 100 : 0);
+
+  // For fractional breakdowns, backend provides component scores in [0..1]
+  // and the total is a weighted sum (deadline 0.4, context 0.3, energy 0.2, preference 0.1).
+  // Render bars as contribution to the final total so the visualization is intuitive.
+  const contribution = fractional ? safeValue * (weight ?? 1) : safeValue;
+  const pct = total > 0 ? (contribution / total) * 100 : 0;
   const percentage = pct.toFixed(0);
+
+  const displayValue = fractional
+    ? `${percentage}% (raw ${(safeValue * 100).toFixed(0)}%)`
+    : `${safeValue.toFixed(2)} (${percentage}%)`;
   
   return (
     <div className="space-y-1">
@@ -311,7 +325,7 @@ function ScoreBar({ label, icon: Icon, value, total, fractional, color }: ScoreB
           <span className="text-muted-foreground">{label}</span>
         </div>
         <span className={cn("font-bold tabular-nums", color)}>
-          {safeValue.toFixed(2)} ({percentage}%)
+          {displayValue}
         </span>
       </div>
       <Progress 

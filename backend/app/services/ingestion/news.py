@@ -6,9 +6,10 @@ logger = logging.getLogger(__name__)
 
 # Hacker News search API (Algolia) - no API key required
 HN_SEARCH_URL = "https://hn.algolia.com/api/v1/search"
+HN_SEARCH_BY_DATE_URL = "https://hn.algolia.com/api/v1/search_by_date"
 
 
-async def fetch_news(limit: int = 5) -> List[Dict[str, str]]:
+async def fetch_news(limit: int = 5, *, mode: str = "front_page") -> List[Dict[str, str]]:
     """
     Fetch news items from a single external source and map to normalized schema.
 
@@ -18,13 +19,25 @@ async def fetch_news(limit: int = 5) -> List[Dict[str, str]]:
     Behavior:
     - On error, raise Exception (caller will handle partial failure)
     """
-    params = {
-        "tags": "front_page",  # stable, always returns top stories
-        "hitsPerPage": max(1, min(int(limit), 20)),
-    }
+    hits_per_page = max(1, min(int(limit), 20))
+
+    if mode == "latest":
+        # More dynamic feed: newest stories (changes frequently)
+        url = HN_SEARCH_BY_DATE_URL
+        params = {
+            "tags": "story",
+            "hitsPerPage": hits_per_page,
+        }
+    else:
+        # Stable feed: front page
+        url = HN_SEARCH_URL
+        params = {
+            "tags": "front_page",
+            "hitsPerPage": hits_per_page,
+        }
 
     async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(HN_SEARCH_URL, params=params)
+        resp = await client.get(url, params=params)
 
     if resp.status_code != 200:
         raise Exception(f"HN API returned {resp.status_code}: {resp.text}")

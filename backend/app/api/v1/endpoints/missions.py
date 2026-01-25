@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Body, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -212,7 +212,10 @@ async def delete_mission(request: Request, mission_id: str):
 
 
 @router.post("/missions/generate")
-async def missions_generate(request: Request, body: MissionsGenerateRequest):
+async def missions_generate(
+    request: Request,
+    body: MissionsGenerateRequest = Body(default_factory=MissionsGenerateRequest),
+):
     start = time.perf_counter()
 
     context = body.context

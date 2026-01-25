@@ -184,6 +184,19 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     updated_at TEXT NOT NULL
 );
 
+-- Synthetic tasks table (for Simulation Lab persistence/load tests)
+CREATE TABLE IF NOT EXISTS synthetic_tasks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    category TEXT DEFAULT '',
+    priority TEXT DEFAULT 'NORMAL',
+    energy_cost TEXT DEFAULT 'medium',
+    deadline_days INTEGER DEFAULT 0,
+    score REAL DEFAULT 0.0,
+    seed INTEGER,
+    created_at TEXT NOT NULL
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_missions_status ON missions(status);
 CREATE INDEX IF NOT EXISTS idx_missions_priority ON missions(priority);
@@ -192,4 +205,6 @@ CREATE INDEX IF NOT EXISTS idx_missions_created_at ON missions(created_at);
 CREATE INDEX IF NOT EXISTS idx_context_run_id ON context_snapshots(run_id);
 CREATE INDEX IF NOT EXISTS idx_context_source ON context_snapshots(source);
 CREATE INDEX IF NOT EXISTS idx_context_ingested_at ON context_snapshots(ingested_at);
+CREATE INDEX IF NOT EXISTS idx_synth_seed ON synthetic_tasks(seed);
+CREATE INDEX IF NOT EXISTS idx_synth_created_at ON synthetic_tasks(created_at);
 """

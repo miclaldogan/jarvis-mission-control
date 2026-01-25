@@ -12,7 +12,14 @@ def test_trending_skipped_when_no_key(monkeypatch):
     """Deterministic smoke test: missing TMDB key => sources_skipped, endpoint returns 200."""
     monkeypatch.delenv("TMDB_API_KEY", raising=False)
 
-    async def fake_build_context_snapshot(*, debug: bool = False, news_limit: int = 5, city: str = None):
+    async def fake_build_context_snapshot(
+        *,
+        debug: bool = False,
+        news_limit: int = 5,
+        city: str = None,
+        news_mode: str | None = None,
+        **_: object,
+    ):
         return {
             "context_id": "ctx_test",
             "observed_at": "2026-01-01T00:00:00Z",
@@ -55,7 +62,14 @@ def test_context_partial_success_returns_200(monkeypatch):
     -> endpoint must still return 200 (partial success)
     """
 
-    async def fake_build_context_snapshot(*, debug: bool = False, news_limit: int = 5, city: str = None):
+    async def fake_build_context_snapshot(
+        *,
+        debug: bool = False,
+        news_limit: int = 5,
+        city: str = None,
+        news_mode: str | None = None,
+        **_: object,
+    ):
         return {
             "context_id": "ctx_test_partial",
             "observed_at": "2026-01-01T00:00:00Z",

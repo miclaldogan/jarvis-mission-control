@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useSystemVitals } from "@/hooks/use-system-vitals";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,10 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { data: vitals } = useSystemVitals();
+
+  const cpu = Math.max(0, Math.min(100, Math.round(vitals?.cpu_percent ?? 0)));
+  const mem = Math.max(0, Math.min(100, Math.round(vitals?.memory_percent ?? 0)));
 
   const navItems = [
     { href: "/dashboard", label: "MISSION CONTROL", icon: LayoutDashboard },
@@ -82,18 +87,18 @@ export function Layout({ children }: LayoutProps) {
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-primary/10">
           <div className="flex items-center justify-between text-xs text-primary/50 mb-2">
             <span>CPU</span>
-            <span>34%</span>
+            <span>{cpu}%</span>
           </div>
           <div className="h-1 bg-primary/10 w-full rounded-full overflow-hidden">
-            <div className="h-full bg-primary/50 w-[34%] animate-pulse"></div>
+            <div className="h-full bg-primary/50 animate-pulse" style={{ width: `${cpu}%` }}></div>
           </div>
           
           <div className="flex items-center justify-between text-xs text-secondary/50 mt-4 mb-2">
             <span>MEM</span>
-            <span>62%</span>
+            <span>{mem}%</span>
           </div>
           <div className="h-1 bg-secondary/10 w-full rounded-full overflow-hidden">
-            <div className="h-full bg-secondary/50 w-[62%] animate-pulse"></div>
+            <div className="h-full bg-secondary/50 animate-pulse" style={{ width: `${mem}%` }}></div>
           </div>
 
           <div className="flex items-center gap-2 mt-6 text-xs text-accent">

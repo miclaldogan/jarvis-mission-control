@@ -9,6 +9,7 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import { FilterBar, FilterCategory, FilterPriority, FilterStatus, FilterDeadline, SortOption } from "@/components/FilterBar";
 import { SystemHarmonics } from "@/components/SystemHarmonics";
 import { JarvisAbout } from "@/components/JarvisAbout";
+import { useContextHealth } from "@/hooks/use-context";
 import { cn } from "@/lib/utils";
 import { 
   Clock, 
@@ -47,30 +48,12 @@ const insertMissionSchema = z.object({
 
 type InsertMission = z.infer<typeof insertMissionSchema>;
 
-// Mock data for demonstration
-const mockSources = [
-  { name: "Weather", icon: "🌤️", status: "online" as const, lastUpdated: new Date(Date.now() - 2 * 60000) },
-  { name: "GitHub", icon: "💻", status: "online" as const, lastUpdated: new Date(Date.now() - 10 * 60000) },
-  { name: "News", icon: "📰", status: "online" as const, lastUpdated: new Date(Date.now() - 1 * 60000) },
-  { name: "Exchange", icon: "💱", status: "stale" as const, lastUpdated: new Date(Date.now() - 20 * 60000) },
-];
-
-const mockAnomalies = [
-  { type: "warning" as const, icon: "⚠️", message: "GitHub issues spike: 15 → 23" },
-  { type: "info" as const, icon: "🌧️", message: "Weather risk: Rain expected 14:00" },
-];
-
-const mockSummary = {
-  riskLevel: "medium" as const,
-  energyLevel: "high" as const,
-  focusScore: 0.87,
-};
-
 export default function Dashboard() {
   const { data: missions, isLoading: loadingMissions, refetch } = useMissions();
   const { data: metrics } = useMetrics();
   const { data: redisHealth } = useRedisHealth();
   const { data: vitals } = useSystemVitals();
+  const { data: contextHealth } = useContextHealth();
   const generateRun = useGenerateRun();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMission, setSelectedMission] = useState<any>(null);
@@ -100,6 +83,62 @@ export default function Dashboard() {
   const getMetric = (name: string) => metrics?.find(m => m.name === name);
   const cacheMetric = getMetric("Cache Hit Rate");
   const computeMetric = getMetric("Compute Time");
+
+  const harmonicsSources = useMemo(() => {
+    const iconMap: Record<string, string> = {
+      weather: "🌤️",
+      github: "💻",
+      news: "📰",
+      exchange: "💱",
+      traffic: "🚗",
+      trending: "📈",
+    };
+
+    const candidates = Object.keys(contextHealth?.freshness || {});
+    const fallback = ["weather", "github", "news", "exchange"];
+    const names = candidates.length > 0 ? candidates : fallback;
+
+    return names.map((name) => {
+      const f = contextHealth?.freshness?.[name];
+      const rawStatus = f?.status;
+      const status = rawStatus === "fresh" ? "online" : rawStatus ? "stale" : "failed";
+      const lastUpdated = f?.last_updated ? new Date(f.last_updated) : null;
+      return {
+        name: name.toUpperCase(),
+        icon: iconMap[name] || "📡",
+        status: status as "online" | "failed" | "stale",
+        lastUpdated,
+      };
+    });
+  }, [contextHealth]);
+
+  const harmonicsAnomalies = useMemo(() => {
+    const severityToType = (sev?: string) => {
+      if (sev === "warning") return "warning" as const;
+      if (sev === "critical") return "error" as const;
+      return "info" as const;
+    };
+    const iconFor = (src?: string) => {
+      if (src === "weather") return "🌧️";
+      if (src === "github") return "⚠️";
+      if (src === "exchange") return "💱";
+      return "📡";
+    };
+
+    return (contextHealth?.anomalies || []).map((a) => ({
+      type: severityToType(a.severity),
+      icon: iconFor(a.source),
+      message: a.message,
+    }));
+  }, [contextHealth]);
+
+  const harmonicsSummary = useMemo(() => {
+    return {
+      riskLevel: (contextHealth?.summary?.risk_level || "low") as "low" | "medium" | "high",
+      energyLevel: (contextHealth?.summary?.energy_level || "medium") as "low" | "medium" | "high",
+      focusScore: Number(contextHealth?.summary?.focus_score ?? 0.7),
+    };
+  }, [contextHealth]);
 
   const form = useForm<InsertMission>({
     resolver: zodResolver(insertMissionSchema as any),
@@ -274,7 +313,7 @@ export default function Dashboard() {
         currentRunId={currentRunId}
         runTimestamp={runTimestamp}
         contextAge={contextAge}
-        sources={mockSources}
+        sources={harmonicsSources}
         onIngestContext={handleIngestContext}
         onGenerateRun={handleGenerateRun}
         isLoading={isLoading}
@@ -374,9 +413,9 @@ export default function Dashboard() {
         {/* Left Column: System Harmonics */}
         <div className="space-y-6">
           <SystemHarmonics
-            sources={mockSources}
-            anomalies={mockAnomalies}
-            summary={mockSummary}
+              sources={harmonicsSources}
+              anomalies={harmonicsAnomalies}
+              summary={harmonicsSummary}
           />
         </div>
 

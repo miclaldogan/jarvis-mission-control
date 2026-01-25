@@ -146,7 +146,8 @@ def calculate_context_score(
     if context is None:
         context = {}
     
-    score = 0.0
+    # Baseline so tasks don't collapse to identical low totals.
+    score = 0.25
     
     # Weather context
     weather = context.get("weather") or {}
@@ -173,6 +174,16 @@ def calculate_context_score(
     
     # Planning/routine tasks have moderate baseline
     if "planning" in tags or "routine" in tags:
+        score += 0.15
+
+    # General tag families to differentiate common filler tasks
+    if any(t in tags for t in ["meeting", "prep", "calendar"]):
+        score += 0.15
+    if "email" in tags:
+        score += 0.10
+    if any(t in tags for t in ["health", "break", "stretch"]):
+        score += 0.10
+    if any(t in tags for t in ["focus", "productivity"]):
         score += 0.20
     
     # Delivery/critical tags boost
@@ -208,7 +219,11 @@ def calculate_energy_score(
             return 0.3
     
     else:
-        # Neutral
+        # Slightly vary by tag families even when user energy is unknown/medium.
+        if any(tag in tags for tag in ["focus", "productivity", "planning"]):
+            return 0.6
+        if any(tag in tags for tag in ["routine", "health", "break", "stretch"]):
+            return 0.55
         return 0.5
 
 

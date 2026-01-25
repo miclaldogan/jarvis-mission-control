@@ -151,6 +151,32 @@ export function JarvisAbout() {
         </div>
       </CyberCard>
 
+      {/* Developers */}
+      <CyberCard className="p-6">
+        <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2">
+          <Github className="w-5 h-5" />
+          GELİŞTİRİCİLER
+        </h3>
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-primary/10">
+            <div className="text-white font-semibold">İclal Doğan</div>
+            <Badge variant="outline" className="text-xs">Full-Stack Engineering</Badge>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-primary/10">
+            <div className="text-white font-semibold">Burcu Yıldırım</div>
+            <Badge variant="outline" className="text-xs">Frontend Engineering</Badge>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-primary/10">
+            <div className="text-white font-semibold">Reyyan Erva Gökkaya</div>
+            <Badge variant="outline" className="text-xs">Data Ingestion & Synthetic Data</Badge>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-primary/10">
+            <div className="text-white font-semibold">Merve Çaloğlu</div>
+            <Badge variant="outline" className="text-xs">Data Ingestion & Synthetic Data</Badge>
+          </div>
+        </div>
+      </CyberCard>
+
       {/* Core Features */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {features.map((feature, idx) => (
@@ -265,7 +291,7 @@ export function JarvisAbout() {
           SİSTEM MİMARİSİ
         </h3>
         <div className="font-mono text-xs bg-black/50 p-4 rounded-lg border border-primary/20 overflow-x-auto">
-          <pre className="text-muted-foreground">
+          <pre className="text-muted-foreground w-max mx-auto">
 {`┌─────────────────────────────────────────────────────────────────┐
 │                      JARVIS MISSION CONTROL                      │
 ├─────────────────────────────────────────────────────────────────┤
@@ -307,28 +333,6 @@ export function JarvisAbout() {
 │                                    └────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘`}
           </pre>
-        </div>
-      </CyberCard>
-
-      {/* Team */}
-      <CyberCard className="p-6">
-        <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2">
-          <Github className="w-5 h-5" />
-          GELİŞTİRİCİ
-        </h3>
-        <div className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-primary/10">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-2xl font-bold">
-            İ
-          </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-bold text-white">İclal Doğan</h4>
-            <p className="text-xs text-muted-foreground">Full-Stack Developer</p>
-          </div>
-          <div className="flex gap-2">
-            <Badge className="bg-primary/20 text-primary border-primary/50">React</Badge>
-            <Badge className="bg-green-500/20 text-green-400 border-green-500/50">Python</Badge>
-            <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/50">TypeScript</Badge>
-          </div>
         </div>
       </CyberCard>
 

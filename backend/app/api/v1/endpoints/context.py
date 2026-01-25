@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import time
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -54,20 +55,40 @@ async def get_context(
     if (redis is not None) and (not refresh):
         cached = await get_json(redis, cache_key)
         if cached is not None:
-            inc_cache_hit()
             data = cached.get("data")
-            response = JSONResponse(ok(request, data), status_code=200)
-            response.headers["X-Cache"] = "HIT"
-            response.headers["X-Cache-Key"] = cache_key
-            response.headers["Cache-Control"] = f"public, max-age={settings.cache_ttl_seconds}"
-            compute_ms = int((time.perf_counter() - start) * 1000)
-            response.headers["X-Compute-Time-ms"] = str(compute_ms)
-            return response
+
+            # If cached snapshot is missing GitHub even though config exists,
+            # treat it as stale and rebuild so the UI doesn't require a manual refresh.
+            github_configured = bool(os.getenv("GITHUB_OWNER")) and bool(os.getenv("GITHUB_REPO"))
+            if github_configured and (data is not None) and (data.get("github") is None):
+                sources_failed = data.get("sources_failed") or []
+                sources_skipped = data.get("sources_skipped") or []
+                github_marked = any(
+                    isinstance(item, dict) and item.get("source") == "github" for item in sources_failed
+                ) or any(isinstance(item, dict) and item.get("source") == "github" for item in sources_skipped)
+
+                # Only bypass the cache if we know GitHub was actually attempted and
+                # recorded as failed/skipped. This avoids defeating caching when the
+                # snapshot simply doesn't include GitHub data (e.g., deterministic tests).
+                if github_marked:
+                    cached = None
+
+            if cached is not None:
+                inc_cache_hit()
+                response = JSONResponse(ok(request, data), status_code=200)
+                response.headers["X-Cache"] = "HIT"
+                response.headers["X-Cache-Key"] = cache_key
+                response.headers["Cache-Control"] = f"public, max-age={settings.cache_ttl_seconds}"
+                compute_ms = int((time.perf_counter() - start) * 1000)
+                response.headers["X-Compute-Time-ms"] = str(compute_ms)
+                return response
 
     inc_cache_miss()
 
     # Build fresh snapshot
-    data = await build_context_snapshot(debug=debug, city=city)
+    # If user explicitly refreshes, use a more dynamic news feed to make changes visible.
+    news_mode = "latest" if refresh else "front_page"
+    data = await build_context_snapshot(debug=debug, city=city, news_mode=news_mode)
 
     # All failed -> 502 (do NOT cache failures)
     if len(data.get("sources_ok") or []) == 0:

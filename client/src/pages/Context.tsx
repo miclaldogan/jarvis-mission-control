@@ -46,6 +46,8 @@ export default function Context() {
   const [secondsLeft, setSecondsLeft] = useState<number>(10 * 60);
   const [contextCache, setContextCache] = useState<string>("");
 
+  const [networkSeries, setNetworkSeries] = useState<Array<{ name: string; uv: number; pv: number }>>([]);
+
   useEffect(() => {
     // Align countdown with the hook's 10-minute refetch cadence.
     setNextRefreshAt(Date.now() + 10 * 60 * 1000);
@@ -62,9 +64,10 @@ export default function Context() {
   const forceRefreshNow = async () => {
     const url = new URL(`/api/v1/context`, window.location.origin);
     url.searchParams.set("refresh", "true");
+    url.searchParams.set("_ts", String(Date.now()));
     if (selectedCity) url.searchParams.set("city", selectedCity);
 
-    const res = await fetch(url.toString());
+    const res = await fetch(url.toString(), { cache: "no-store" });
     if (!res.ok) throw new Error("Failed to refresh context");
 
     const cache = res.headers.get("X-Cache") || "";
@@ -110,15 +113,21 @@ export default function Context() {
     { subject: 'NET', A: 0, fullMark: 100 },
   ];
 
-  const areaData = [
-    { name: '00:00', uv: 4000, pv: 2400 },
-    { name: '04:00', uv: 3000, pv: 1398 },
-    { name: '08:00', uv: 2000, pv: 9800 },
-    { name: '12:00', uv: 2780, pv: 3908 },
-    { name: '16:00', uv: 1890, pv: 4800 },
-    { name: '20:00', uv: 2390, pv: 3800 },
-    { name: '23:59', uv: 3490, pv: 4300 },
-  ];
+  useEffect(() => {
+    if (!vitals) return;
+
+    const ts = vitals.timestamp ? new Date(vitals.timestamp) : new Date();
+    const label = ts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+    const inbound = Number(vitals.network_recv_mbps ?? 0);
+    const outbound = Number(vitals.network_sent_mbps ?? 0);
+
+    setNetworkSeries((prev) => {
+      const next = [...prev, { name: label, uv: inbound, pv: outbound }];
+      // Keep a short rolling window for readability.
+      return next.slice(-30);
+    });
+  }, [vitals]);
 
   return (
     <Layout>
@@ -173,8 +182,8 @@ export default function Context() {
           )}
         </CyberCard>
 
-        {/* System Harmonics Radar */}
-        <CyberCard title="SYSTEM HARMONICS" glowColor="secondary" className="h-64">
+        {/* System Vitals Radar */}
+        <CyberCard title="SYSTEM VITALS" glowColor="secondary" className="h-64">
           <div className="h-full w-full -mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
@@ -194,7 +203,16 @@ export default function Context() {
               <div className="flex items-center gap-4">
                 <Github className="w-12 h-12 text-accent opacity-80" />
                 <div>
-                  <div className="font-mono text-white text-lg font-bold">{context.github.owner}/{context.github.repo}</div>
+                  <a
+                    className="font-mono text-white text-lg font-bold inline-flex items-center gap-2 hover:text-accent transition-colors"
+                    href={`https://github.com/${context.github.owner}/${context.github.repo}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open on GitHub"
+                  >
+                    {context.github.owner}/{context.github.repo}
+                    <ExternalLink className="w-4 h-4 opacity-80" />
+                  </a>
                   <div className="text-xs text-muted-foreground">Repository Status</div>
                 </div>
               </div>
@@ -229,6 +247,7 @@ export default function Context() {
               <div className="text-xs font-mono text-muted-foreground">
                 Next refresh in {String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:{String(secondsLeft % 60).padStart(2, "0")}
                 {contextCache ? ` • cache=${contextCache}` : ""}
+                {context?.observed_at ? ` • observed=${new Date(context.observed_at).toLocaleTimeString()}` : ""}
               </div>
               <button
                 onClick={() => {
@@ -343,7 +362,7 @@ export default function Context() {
       <CyberCard title="NETWORK TRAFFIC ANALYSIS" subtitle="INBOUND / OUTBOUND PACKET VOLUME" glowColor="accent">
         <div className="h-[300px] w-full mt-4">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={areaData}>
+            <AreaChart data={networkSeries}>
               <defs>
                 <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>

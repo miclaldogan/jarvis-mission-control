@@ -16,13 +16,14 @@ Jarvis Mission Control: Akıllı görev yönetim sistemi
 - `GET /api/v1/health` → health check
 - `GET /api/v1/context` → canlı context snapshot (weather, github, news)
 - `POST /api/v1/missions/generate` → context'ten görev üretimi
-- `GET /api/v1/synthetic/tasks` → **100k-1M sentetik task** (cache proof)
+- `GET /api/v1/synthetic/tasks` → **100k-1M sentetik task preview** (cache proof)
+- `POST /api/v1/synthetic/tasks/persist` → **100k-1M sentetik task kalıcı kayıt** (SQLite)
 - `GET /api/v1/reports/mission-load` → heavy compute report (cache proof)
 - `GET /api/v1/report` → aggregated demo report
 
 ### ✅ 3. 100k-1M Sentetik Veri + Cache İspatı
 `GET /api/v1/synthetic/tasks?n=1000000&seed=42`
-- **1 milyon** task üretir (deterministic seed ile)
+- **1 milyon** task için deterministic preview sample üretir (seed ile)
 - Redis cache ile MISS→HIT proof:
   ```bash
   # First call (MISS):  x-cache: MISS, x-compute-time-ms: 0-5ms
@@ -30,6 +31,12 @@ Jarvis Mission Control: Akıllı görev yönetim sistemi
   ```
 - Cache proof headers: `X-Cache`, `X-Compute-Time-ms`, `X-Cache-Key`
 - Demo script: `bash infra/scripts/demo.sh`
+
+Kalıcı kayıt (SQLite) için:
+
+`POST /api/v1/synthetic/tasks/persist?n=1000000&seed=42`
+- `synthetic_tasks` tablosuna yazar (Mission Control UI'yi kirletmez)
+- `X-Compute-Time-ms` ile compute süresini gösterir
 
 ### ✅ 4. Responsive Arayüz
 - Frontend: React-based responsive UI (teammate: burcuyldrm)
@@ -97,14 +104,24 @@ If required env vars are missing, the source is reported under `sources_skipped`
 
 ## Local run
 
+Node notu: `client/` build için Node.js 18+ gerekir (Node 20 önerilir). `.nvmrc` ile proje Node 20'yi hedefler.
+
 ### Option A: Docker Compose (recommended)
 If you have Docker Compose available:
 
 ```bash
-docker compose up --build
+cp backend/.env.example backend/.env
+# edit backend/.env (GITHUB_TOKEN, optional keys, etc.)
+
+docker compose up -d --build
 ```
 
 API will be at `http://localhost:8000`.
+UI will be at `http://localhost:3000`.
+
+Notes:
+- `docker-compose.yml` expects `backend/.env` (not `.env.example`) so you can safely customize per-server.
+- Redis is not exposed on a host port by default (safer for real servers). It is reachable only from containers.
 
 ### Option A2: Frontend HMR (no rebuild loop)
 If you are actively developing the UI and don't want to rebuild/restart the frontend container for every change, use the dev profile:
@@ -136,7 +153,7 @@ docker run --rm -p 6379:6379 --name jarvis-redis redis:7
 cd backend
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
 export REDIS_URL="redis://localhost:6379/0"
 export CACHE_TTL_SECONDS="120"
@@ -156,6 +173,7 @@ Expected:
 - First `synthetic/tasks` call: `X-Cache: MISS`
 - Second call (same params): `X-Cache: HIT`
 - Different `seed`: `MISS`
+- If Redis is not configured/reachable: `X-Cache: BYPASS`
 
 You can also point the script to another base URL:
 
@@ -169,6 +187,13 @@ The backend exposes `GET /metrics` in Prometheus text format.
 ```bash
 curl -s http://localhost:8000/metrics | head
 curl -s http://localhost:8000/metrics | grep -E 'cache_hits_total|cache_misses_total'
+
+Prod UI (nginx) üzerinden de metrics/health proxylanır:
+
+```bash
+curl -s http://localhost:3000/metrics | head
+curl -s http://localhost:3000/health | jq .
+```
 ```
 
 ## API quick reference
@@ -179,6 +204,7 @@ All endpoints are under `/api/v1` and use the same response envelope.
 | `/api/v1/health` | GET | Liveness + version | No |
 | `/context` | GET | Aggregated context (weather/github/news) | Yes (short TTL) |
 | `/synthetic/tasks` | GET | Cache proof endpoint (`?n=100000&seed=42`) | Yes (when seed provided) |
+| `/synthetic/tasks/persist` | POST | Persist synthetic tasks to SQLite (`?n=1000000&seed=42`) | No |
 | `/missions/generate` | POST | Generate missions from context | No |
 | `/reports/mission-load` | GET | Heavy-compute report (`?window=7d&bucket=day&seed=42`) | Yes (when seed provided) |
 | `/report` | GET | Demo-friendly report with context + missions | No |
@@ -198,8 +224,14 @@ curl -s http://localhost:8000/api/v1/context | jq '.data | keys'
 # Synthetic tasks (cache proof)
 curl -sD - http://localhost:8000/api/v1/synthetic/tasks?n=100000\&seed=42 -o /dev/null | grep -i x-cache
 
+# Synthetic tasks persist (SQLite)
+curl -sD - -X POST 'http://localhost:8000/api/v1/synthetic/tasks/persist?n=100000&seed=42' -o /dev/null | grep -i x-compute-time-ms
+
 # Mission-load report (cache proof)
 curl -sD - 'http://localhost:8000/api/v1/reports/mission-load?window=7d&bucket=day&seed=42' -o /dev/null | grep -i x-cache
+
+# Generate missions (body is optional; defaults are applied)
+curl -s -X POST 'http://localhost:8000/api/v1/missions/generate' | jq '.data.run_id'
 
 # Prometheus metrics
 curl -s http://localhost:8000/metrics | grep cache_hits
@@ -281,6 +313,7 @@ Example file: `backend/.env.example`
   - 6 closed issues (#2, #3, #6, #8, #14, #76)
 
 ## Troubleshooting
+- If `jq` is missing (common on fresh servers): either install it (`sudo apt install -y jq`) or remove `| jq .` from curl examples.
 - If `docker compose` is missing:
 	- On Mint/Ubuntu, `sudo apt install -y docker-compose-v2` typically provides it.
 	- Some setups use `docker-compose-plugin` or legacy `docker-compose`.

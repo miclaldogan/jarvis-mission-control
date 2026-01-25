@@ -32,7 +32,7 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE = ((import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "") || window.location.origin);
 
 type TaskCount = 100000 | 1000000;
 
@@ -84,7 +84,7 @@ export default function Lab() {
     addLog("═══════════════════════════════════════════════", "header");
     addLog("");
     addLog(`Target Count: ${taskCount.toLocaleString()} synthetic tasks`);
-    addLog(`Endpoint: GET /api/v1/synthetic/tasks?n=${taskCount.toLocaleString()}&seed=...`);
+    addLog(`Endpoint: POST /api/v1/synthetic/tasks/persist?n=${taskCount.toLocaleString()}&seed=...`);
     addLog("");
     addLog("Initializing virtual memory allocation...");
     
@@ -92,7 +92,7 @@ export default function Lab() {
     addLog("Allocating task buffer pools...", "data");
     
     await new Promise(r => setTimeout(r, 500));
-    addLog("Preparing database transaction...", "data");
+    addLog("Preparing database inserts...", "data");
     
     await new Promise(r => setTimeout(r, 500));
     addLog("Sending bulk create request...", "data");
@@ -105,18 +105,16 @@ export default function Lab() {
         addLog("📊 GENERATION COMPLETE", "header");
         addLog("═══════════════════════════════════════════════", "header");
         addLog(`Requested Total (n): ${(data.total ?? taskCount).toLocaleString()}`, "success");
-        addLog(`Preview Returned: ${(data.sampleCount ?? 0).toLocaleString()} tasks`, "success");
+        addLog(`Inserted: ${(data.sampleCount ?? 0).toLocaleString()} tasks`, "success");
         addLog(`Status: ${data.message || "SUCCESS"}`, "success");
-        if (data.cacheStatus) addLog(`Cache: ${data.cacheStatus}`, data.cacheStatus === "HIT" ? "success" : "info");
         if (data.computeMs) addLog(`Compute: ${data.computeMs}ms`, "data");
-        if (data.cacheKey) addLog(`Cache-Key: ${data.cacheKey}`, "data");
         addLog(`Timestamp: ${new Date().toISOString()}`, "data");
         addLog("");
         addLog("✅ SIMULATION COMPLETE", "success");
         setSimulationRunning(false);
         toast({
           title: "SIMULATION COMPLETE",
-          description: `Previewed ${(data.sampleCount ?? 0).toLocaleString()} tasks (n=${(data.total ?? taskCount).toLocaleString()}).`,
+          description: `Persisted ${(data.sampleCount ?? 0).toLocaleString()} tasks (n=${(data.total ?? taskCount).toLocaleString()}).`,
           className: "bg-black border-accent text-accent",
         });
       },
@@ -156,10 +154,11 @@ export default function Lab() {
 
   const handleCacheTest = async () => {
     addLog("Running cache performance test...");
-    addLog(`→ GET /api/v1/synthetic/tasks?n=100000&seed=42`, "data");
     try {
       const result = await cacheTest.runTest();
+      addLog(`→ GET /api/v1/synthetic/tasks?n=100000&seed=${result.seed}`, "data");
       addLog(`← Response: ${result.cacheStatus} (${result.computeTime}ms)`, result.cacheStatus === "HIT" ? "success" : "info");
+      if (result.cacheKey) addLog(`← X-Cache-Key: ${result.cacheKey}`, "data");
       toast({
         title: `CACHE ${result.cacheStatus}`,
         description: `Response time: ${result.computeTime}ms`,
@@ -437,6 +436,11 @@ export default function Lab() {
                  <p className="text-xs text-muted-foreground">
                    Test cache performance: first call = MISS (slow), second call = HIT (fast). Demonstrates Redis caching efficiency.
                  </p>
+                  <p className="text-[11px] text-muted-foreground/80">
+                    Not: <span className="font-mono">HIT</span> için Redis bağlı olmalı ve aynı istek aynı cache key ile (örn.
+                    <span className="font-mono"> n + seed + sample</span>) TTL dolmadan tekrar gelmeli. <span className="font-mono">Reset</span> yeni seed üretir → ilk istek tekrar <span className="font-mono">MISS</span> olur.
+                    <span className="ml-2">Eğer <span className="font-mono">BYPASS</span> görürsen cache devre dışıdır (Redis yok/bağlı değil).</span>
+                  </p>
                  <div className="flex gap-2">
                    <Button 
                      onClick={handleCacheTest} 

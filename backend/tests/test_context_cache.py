@@ -12,7 +12,14 @@ def _clear_context_cache(client) -> None:
 
 
 def test_context_cache_proof_headers_and_refresh(redis_client, monkeypatch):
-    async def fake_build_context_snapshot(*, debug: bool = False, news_limit: int = 5, city: str = None):
+    async def fake_build_context_snapshot(
+        *,
+        debug: bool = False,
+        news_limit: int = 5,
+        city: str = None,
+        news_mode: str | None = None,
+        **_: object,
+    ):
         base = {
             "context_id": "ctx_test",
             "observed_at": "2026-01-01T00:00:00Z",

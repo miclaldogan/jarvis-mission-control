@@ -225,35 +225,32 @@ export function useCreateMission() {
 
 // POST /api/missions/bulk - Use synthetic tasks endpoint
 export function useBulkCreateMissions() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (count: number) => {
       // Synthetic tasks endpoint only accepts 100000 or 1000000
       const validN = count >= 1000000 ? 1000000 : 100000;
       const seed = Date.now();
-      const res = await fetch(`${API_BASE}/api/v1/synthetic/tasks?n=${validN}&seed=${seed}`);
+      const res = await fetch(`${API_BASE}/api/v1/synthetic/tasks/persist?n=${validN}&seed=${seed}`, {
+        method: "POST",
+      });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error?.message || "Failed to bulk create missions");
       }
       const json = await res.json();
-
-      const cacheStatus = res.headers.get("X-Cache") || "";
-      const cacheKey = res.headers.get("X-Cache-Key") || "";
       const computeMs = res.headers.get("X-Compute-Time-ms") || "";
 
-      const sampleCount = (json.data?.sample || []).length;
-      const totalN = json.data?.n ?? validN;
+      const inserted = Number(json.data?.inserted ?? 0);
+      const totalN = Number(json.data?.n ?? validN);
       return {
         total: totalN,
-        sampleCount,
+        sampleCount: inserted,
         seed: json.data?.seed ?? seed,
-        cacheStatus,
-        cacheKey,
+        cacheStatus: "",
+        cacheKey: "",
         computeMs,
-        message: `Preview sample: ${sampleCount} tasks (n=${totalN})${cacheStatus ? ` [cache=${cacheStatus}]` : ""}`,
+        message: `Persisted ${inserted} tasks into SQLite (n=${totalN})`,
       };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["missions-today"] }),
   });
 }

@@ -25,7 +25,13 @@ def _missing(*names: str) -> list[str]:
     return out
 
 
-async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, city: str = None) -> dict[str, Any]:
+async def build_context_snapshot(
+    *,
+    debug: bool = False,
+    news_limit: int = 5,
+    city: str = None,
+    news_mode: str = "front_page",
+) -> dict[str, Any]:
     """Aggregate multiple external sources into a single normalized context dict.
 
     Contract notes:
@@ -120,7 +126,7 @@ async def build_context_snapshot(*, debug: bool = False, news_limit: int = 5, ci
     # News (Hacker News via Algolia)
     try:
         fetch_time = _now_iso()
-        data["news"] = await fetch_news(limit=news_limit)
+        data["news"] = await fetch_news(limit=news_limit, mode=news_mode)
         data["sources_ok"].append("news")
         data["freshness"]["news_updated_at"] = fetch_time
     except Exception as e:

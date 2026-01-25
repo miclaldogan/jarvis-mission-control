@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Optional
 
@@ -90,7 +91,7 @@ def generate_missions(
         ]
         
         missions.append({
-            "id": f"msn_{idx:03d}",
+            "id": f"msn_{uuid.uuid4().hex[:12]}",
             "title": gm.title,
             "priority": gm.priority,
             "priority_score": score_dict["total"],
@@ -213,15 +214,26 @@ def generate_missions(
     while len(missions) < limit and len(used_fillers) < len(filler_tasks):
         filler = rng.choice([f for f in filler_tasks if f["title"] not in used_fillers])
         used_fillers.add(filler["title"])
+
+        score = calculate_mission_score(
+            due_at=None,
+            tags=filler.get("tags", []),
+            context=context,
+            preferences=preferences,
+        )
+        score_dict = score.to_dict()
         
         idx = len(missions) + 1
         missions.append({
-            "id": f"msn_{idx:03d}",
+            "id": f"msn_{uuid.uuid4().hex[:12]}",
             "title": filler["title"],
             "priority": filler["priority"],
-            "priority_score": 40.0,
-            "score_breakdown": {"base": 40, "routine": 0},
-            "reasons": [f"[{filler['pack']}:{filler['rule']}] {filler['why']}"],
+            "priority_score": score_dict["total"],
+            "score_breakdown": score_dict["breakdown"],
+            "reasons": [
+                f"[{filler['pack']}:{filler['rule']}] {filler['why']}",
+                *score_dict["reasons"],
+            ],
             "status": "open",
             "due_at": None,
             "tags": filler["tags"],
