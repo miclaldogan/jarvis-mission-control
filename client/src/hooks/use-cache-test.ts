@@ -28,7 +28,9 @@ export function useCacheTest() {
     const endpoint = `/api/v1/synthetic/tasks?n=100000&seed=${usedSeed}`;
     
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`);
+      // Important: disable browser HTTP caching; otherwise it may replay the first
+      // MISS response (due to Cache-Control) and you'll never observe a HIT.
+      const response = await fetch(`${API_BASE}${endpoint}`, { cache: "no-store" });
       const endTime = performance.now();
       const computeTime = Math.round(endTime - startTime);
       
