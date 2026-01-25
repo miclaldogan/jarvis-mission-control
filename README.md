@@ -106,6 +106,23 @@ docker compose up --build
 
 API will be at `http://localhost:8000`.
 
+### Option A2: Frontend HMR (no rebuild loop)
+If you are actively developing the UI and don't want to rebuild/restart the frontend container for every change, use the dev profile:
+
+```bash
+docker compose --profile dev up -d --build backend redis frontend-dev
+```
+
+- UI (Vite dev server): `http://localhost:5173`
+- Backend (direct): `http://localhost:8000`
+- Backend via UI proxy: `http://localhost:5173/api/v1/health`
+
+Stop dev profile services:
+
+```bash
+docker compose --profile dev down
+```
+
 ### Option B: No Compose plugin (manual run)
 Some Linux setups have `docker` but not the `docker compose` plugin.
 
@@ -159,7 +176,7 @@ All endpoints are under `/api/v1` and use the same response envelope.
 
 | Endpoint | Method | Description | Cache |
 |----------|--------|-------------|-------|
-| `/health` | GET | Liveness + version | No |
+| `/api/v1/health` | GET | Liveness + version | No |
 | `/context` | GET | Aggregated context (weather/github/news) | Yes (short TTL) |
 | `/synthetic/tasks` | GET | Cache proof endpoint (`?n=100000&seed=42`) | Yes (when seed provided) |
 | `/missions/generate` | POST | Generate missions from context | No |
@@ -169,8 +186,11 @@ All endpoints are under `/api/v1` and use the same response envelope.
 ### curl examples
 
 ```bash
-# Health check
+# Health check (preferred)
 curl -s http://localhost:8000/api/v1/health | jq .
+
+# Backward-compatible alias
+curl -s http://localhost:8000/health | jq .
 
 # Context snapshot
 curl -s http://localhost:8000/api/v1/context | jq '.data | keys'

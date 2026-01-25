@@ -129,8 +129,13 @@ async def create_mission(request: Request, body: CreateMissionRequest):
         created_at=datetime.now(timezone.utc).isoformat()
     )
     
-    # TODO: Store in database when persistence layer is ready
-    # For now, just return the created mission
+    # Store in hybrid storage (SQLite + in-memory cache)
+    # Keep the response schema unchanged for the UI/tests.
+    try:
+        storage.store_mission(mission.model_dump())
+    except Exception:
+        # Storage is best-effort here; creation still succeeds.
+        pass
     
     response = JSONResponse(ok(request, mission.model_dump()), status_code=201)
     compute_ms = int((time.perf_counter() - start) * 1000)

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 // Type definitions matching backend response
 type Priority = "CRITICAL" | "HIGH" | "NORMAL" | "LOW" | "P1" | "P2" | "P3" | "P4";
@@ -121,32 +121,7 @@ export function useGenerateRun() {
       if (!res.ok) throw new Error("Failed to generate run");
       const json = await res.json();
       const missions = json.data?.missions || [];
-      
-      // Save generated missions to persistence (so they show in /missions/today)
-      for (const m of missions.slice(0, 10)) { // Save first 10
-        try {
-          await fetch(`${API_BASE}/api/v1/missions`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: m.id,
-              title: m.title,
-              priority: m.priority,
-              status: m.status || "open",
-              tags: m.tags || [],
-              why: m.why || "",
-              due_at: m.due_at,
-              priority_score: m.priority_score,
-              score_breakdown: m.score_breakdown,
-              reasons: m.reasons,
-              evidence: m.evidence,
-            }),
-          });
-        } catch (e) {
-          console.warn("Failed to persist mission:", m.id);
-        }
-      }
-      
+
       incrementRun();
       return {
         run: getCurrentRun(),
@@ -175,10 +150,7 @@ export function useCreateMission() {
       return envelope.data as Mission;
     },
     onSuccess: (newMission) => {
-      queryClient.setQueryData(["missions"], (old: Mission[] = []) => [
-        newMission,
-        ...old,
-      ]);
+      queryClient.invalidateQueries({ queryKey: ["missions-today"] });
     },
   });
 }
@@ -200,6 +172,6 @@ export function useBulkCreateMissions() {
       const json = await res.json();
       return { message: `Generated ${json.data.sample.length} tasks from ${validN} total`, count: json.data.sample.length };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["missions"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["missions-today"] }),
   });
 }

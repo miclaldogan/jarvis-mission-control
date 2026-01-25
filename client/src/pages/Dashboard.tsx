@@ -34,6 +34,8 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { motion } from "framer-motion";
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+
 // Mission schema inline
 const insertMissionSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -121,6 +123,24 @@ export default function Dashboard() {
     });
   };
 
+  const normalizePriority = (p?: string): FilterPriority => {
+    const up = (p || "").toUpperCase();
+    if (up === "CRITICAL" || up === "P1") return "critical";
+    if (up === "HIGH" || up === "P2") return "high";
+    if (up === "NORMAL" || up === "P3") return "normal";
+    if (up === "LOW" || up === "P4") return "low";
+    return "all";
+  };
+
+  const normalizeStatus = (s?: string): FilterStatus => {
+    const up = (s || "").toUpperCase();
+    if (up === "PENDING" || up === "OPEN" || up === "SNOOZED") return "planned";
+    if (up === "IN_PROGRESS" || up === "IN PROGRESS") return "in_progress";
+    if (up === "COMPLETED" || up === "DONE") return "completed";
+    if (up === "FAILED" || up === "CANCELLED") return "failed";
+    return "all";
+  };
+
   // Filter and sort missions
   const filteredMissions = useMemo(() => {
     if (!missions) return [];
@@ -132,17 +152,10 @@ export default function Dashboard() {
       result = result.filter(m => m.category?.toLowerCase() === category);
     }
     if (priority !== "all") {
-      result = result.filter(m => m.priority?.toLowerCase() === priority);
+      result = result.filter(m => normalizePriority(m.priority) === priority);
     }
     if (status !== "all") {
-      const statusMap: Record<FilterStatus, string> = {
-        all: "",
-        planned: "PENDING",
-        in_progress: "IN_PROGRESS",
-        completed: "COMPLETED",
-        failed: "FAILED",
-      };
-      result = result.filter(m => m.status === statusMap[status]);
+      result = result.filter(m => normalizeStatus(m.status) === status);
     }
     if (deadline !== "all") {
       result = result.filter(m => {
@@ -158,12 +171,18 @@ export default function Dashboard() {
     }
 
     // Apply sorting
-    const priorityOrder = { CRITICAL: 0, HIGH: 1, NORMAL: 2, LOW: 3 };
+    const priorityOrder: Record<FilterPriority, number> = {
+      all: 99,
+      critical: 0,
+      high: 1,
+      normal: 2,
+      low: 3,
+    };
     result.sort((a, b) => {
       switch (sortBy) {
         case "priority":
-          return (priorityOrder[a.priority as keyof typeof priorityOrder] || 2) - 
-                 (priorityOrder[b.priority as keyof typeof priorityOrder] || 2);
+          return (priorityOrder[normalizePriority(a.priority)] ?? 2) -
+                 (priorityOrder[normalizePriority(b.priority)] ?? 2);
         case "deadline":
           if (!a.dueAt && !b.dueAt) return 0;
           if (!a.dueAt) return 1;
@@ -190,12 +209,12 @@ export default function Dashboard() {
     setIsLoading(true);
     try {
       // First refresh context
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/v1/context?refresh=true`);
+      const res = await fetch(`${API_BASE}/api/v1/context?refresh=true`);
       if (res.ok) {
         setContextAge(new Date());
         
         // Then trigger brain processing to generate missions from fresh context
-        const brainRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/v1/brain/process`, {
+        const brainRes = await fetch(`${API_BASE}/api/v1/brain/process`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})

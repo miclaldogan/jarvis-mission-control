@@ -16,6 +16,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from redis.asyncio import Redis
 
 from app.api.v1.router import api_router
+from app.api.v1.endpoints.health import health as v1_health
 from app.http_envelope import err
 from app.metrics import observe_request
 from app.settings import get_settings
@@ -161,6 +162,10 @@ def create_app() -> FastAPI:
     @app.get("/metrics")
     async def metrics() -> Response:
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+    @app.get("/health")
+    async def health(request: Request):
+        return await v1_health(request)
 
     # NOTE: We intentionally handle exceptions in middleware so that:
     # - every response includes X-Request-Id
