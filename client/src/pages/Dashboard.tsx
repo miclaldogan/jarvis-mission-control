@@ -8,6 +8,7 @@ import { TaskDetailDialog } from "@/components/TaskDetailDialog";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { FilterBar, FilterCategory, FilterPriority, FilterStatus, FilterDeadline, SortOption } from "@/components/FilterBar";
 import { SystemHarmonics } from "@/components/SystemHarmonics";
+import { JarvisAbout } from "@/components/JarvisAbout";
 import { cn } from "@/lib/utils";
 import { 
   Clock, 
@@ -16,7 +17,9 @@ import {
   Play,
   CheckCircle,
   Radio,
-  FlaskConical
+  FlaskConical,
+  Info,
+  X
 } from "lucide-react";
 import { format, isToday, isTomorrow, isThisWeek } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -73,6 +76,9 @@ export default function Dashboard() {
   
   // Demo mode toggle
   const [isDemoMode, setIsDemoMode] = useState(false);
+  
+  // About section toggle
+  const [showAbout, setShowAbout] = useState(false);
   
   // Filter state
   const [category, setCategory] = useState<FilterCategory>("all");
@@ -228,6 +234,31 @@ export default function Dashboard() {
         onGenerateRun={handleGenerateRun}
         isLoading={isLoading}
       />
+
+      {/* About Toggle Button */}
+      <div className="flex justify-end mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAbout(!showAbout)}
+          className={cn(
+            "font-mono text-xs gap-2 transition-all",
+            showAbout 
+              ? "bg-primary/20 text-primary border-primary/50" 
+              : "text-muted-foreground hover:text-primary"
+          )}
+        >
+          {showAbout ? <X className="w-4 h-4" /> : <Info className="w-4 h-4" />}
+          {showAbout ? "CLOSE INFO" : "ABOUT PROJECT"}
+        </Button>
+      </div>
+
+      {/* About Section */}
+      {showAbout && (
+        <div className="mb-8">
+          <JarvisAbout />
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
         <div>

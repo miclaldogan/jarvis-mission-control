@@ -70,20 +70,38 @@ class MissionsGenerateRequest(BaseModel):
 
 
 @router.get("/missions")
-async def list_missions(request: Request, limit: int = 50):
+async def list_missions(request: Request, limit: int = 50, sort_by: str = "priority"):
     """
     Get all missions from storage.
     
     Returns persisted missions including auto-generated brain missions.
+    Sorted by priority (P1 > P2 > P3 > P4) by default.
     """
     missions = storage.get_all_missions()
     
-    # Sort by created_at descending (newest first)
-    missions.sort(key=lambda m: m.get("created_at", ""), reverse=True)
+    # Priority order mapping (lower = higher priority)
+    priority_order = {"P1": 1, "P2": 2, "P3": 3, "P4": 4, "CRITICAL": 1, "HIGH": 2, "NORMAL": 3, "LOW": 4}
+    
+    if sort_by == "priority":
+        # Sort by priority first, then by priority_score descending, then by created_at
+        missions.sort(
+            key=lambda m: (
+                priority_order.get(m.get("priority", "P3"), 5),
+                -(m.get("priority_score", 0) or 0),
+                m.get("created_at", "") or ""
+            ),
+            reverse=False
+        )
+    elif sort_by == "created_at":
+        # Sort by created_at descending (newest first)
+        missions.sort(key=lambda m: m.get("created_at", ""), reverse=True)
+    elif sort_by == "score":
+        # Sort by priority_score descending
+        missions.sort(key=lambda m: m.get("priority_score", 0) or 0, reverse=True)
     
     return ok(request, {
         "missions": missions[:limit],
-        "count": len(missions),
+        "count": min(limit, len(missions)),
         "total": len(missions),
     })
 
