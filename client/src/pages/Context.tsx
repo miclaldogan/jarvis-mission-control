@@ -42,6 +42,12 @@ export default function Context() {
   const { data: context, isLoading, refetch } = useContextItems(selectedCity);
   const { data: vitals } = useSystemVitals();
 
+  const displaySource = (source: string) => {
+    // Avoid confusion with the "NETWORK TRAFFIC" chart (system vitals).
+    if (source === 'traffic') return 'commute';
+    return source;
+  };
+
   const [nextRefreshAt, setNextRefreshAt] = useState<number>(() => Date.now() + 10 * 60 * 1000);
   const [secondsLeft, setSecondsLeft] = useState<number>(10 * 60);
   const [contextCache, setContextCache] = useState<string>("");
@@ -394,14 +400,6 @@ export default function Context() {
       {/* Source Status Footer */}
       {context && (
         <div className="mt-8 grid grid-cols-3 gap-4 text-xs font-mono">
-          {(() => {
-            const displaySource = (source: string) => {
-              // Avoid confusion with the "NETWORK TRAFFIC" chart (system vitals).
-              if (source === 'traffic') return 'commute';
-              return source;
-            };
-
-            return (
           <div className="p-4 bg-accent/10 border border-accent/20 rounded">
             <div className="text-accent font-bold mb-2">SOURCES ONLINE: {context.sources_ok?.length || 0}</div>
             <div className="text-muted-foreground">
@@ -420,8 +418,6 @@ export default function Context() {
               {context.sources_skipped?.map(s => displaySource(s.source)).join(', ') || 'None'}
             </div>
           </div>
-            );
-          })()}
         </div>
       )}
     </Layout>
