@@ -92,7 +92,7 @@ export default function Context() {
         const url = new URL(`/api/v1/context`, window.location.origin);
         url.searchParams.set("refresh", "false");
         if (selectedCity) url.searchParams.set("city", selectedCity);
-        const res = await fetch(url.toString());
+        const res = await fetch(url.toString(), { cache: "no-store" });
         if (res.ok) setContextCache(res.headers.get("X-Cache") || "");
       } catch {
         // ignore

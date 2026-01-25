@@ -85,7 +85,10 @@ export function useContextItems(city?: string) {
       };
 
       // First try a cache-friendly read.
-      const res = await fetch(makeUrl(false).toString());
+      // NOTE: We still benefit from server-side Redis caching (X-Cache HIT/MISS).
+      // But we disable *browser* HTTP caching so a previous stale response (e.g.,
+      // GitHub rate-limited showing 0) doesn't stick for max-age=600.
+      const res = await fetch(makeUrl(false).toString(), { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch context");
       const json = await res.json();
       const data = json.data as ContextData;
