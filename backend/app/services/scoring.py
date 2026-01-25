@@ -143,10 +143,13 @@ def calculate_context_score(
     if not tags:
         return 0.3  # Default moderate score
     
+    if context is None:
+        context = {}
+    
     score = 0.0
     
     # Weather context
-    weather = context.get("weather", {})
+    weather = context.get("weather") or {}
     condition = (weather.get("condition") or "").lower()
     
     if "weather" in tags:
@@ -156,9 +159,9 @@ def calculate_context_score(
             score += 0.15  # Lower match for good weather
     
     # GitHub context
-    github = context.get("github", {})
-    open_prs = github.get("open_prs", 0)
-    open_issues = github.get("open_issues", 0)
+    github = context.get("github") or {}
+    open_prs = github.get("open_prs", 0) or 0
+    open_issues = github.get("open_issues", 0) or 0
     
     if "github" in tags:
         if open_prs >= 5 or open_issues >= 15:

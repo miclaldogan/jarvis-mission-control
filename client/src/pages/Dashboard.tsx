@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { useMissions, useCreateMission } from "@/hooks/use-missions";
-import { useMetrics } from "@/hooks/use-metrics";
+import { useMissions, useCreateMission, useGenerateRun, getCurrentRun } from "@/hooks/use-missions";
+import { useMetrics, useRedisHealth } from "@/hooks/use-metrics";
 import { useSystemVitals } from "@/hooks/use-system-vitals";
 import { CyberCard } from "@/components/CyberCard";
 import { Layout } from "@/components/Layout";
@@ -14,13 +14,17 @@ import {
   Plus, 
   Terminal,
   Play,
-  CheckCircle
+  CheckCircle,
+  Radio,
+  FlaskConical
 } from "lucide-react";
 import { format, isToday, isTomorrow, isThisWeek } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -58,12 +62,17 @@ const mockSummary = {
 };
 
 export default function Dashboard() {
-  const { data: missions, isLoading: loadingMissions } = useMissions();
+  const { data: missions, isLoading: loadingMissions, refetch } = useMissions();
   const { data: metrics } = useMetrics();
+  const { data: redisHealth } = useRedisHealth();
   const { data: vitals } = useSystemVitals();
+  const generateRun = useGenerateRun();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMission, setSelectedMission] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  
+  // Demo mode toggle
+  const [isDemoMode, setIsDemoMode] = useState(false);
   
   // Filter state
   const [category, setCategory] = useState<FilterCategory>("all");
@@ -72,9 +81,10 @@ export default function Dashboard() {
   const [deadline, setDeadline] = useState<FilterDeadline>("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
 
-  // Run state (mock)
-  const [currentRunId, setCurrentRunId] = useState(15);
-  const [runTimestamp, setRunTimestamp] = useState(new Date());
+  // Run state - real from hook
+  const initialRun = getCurrentRun();
+  const [currentRunId, setCurrentRunId] = useState(initialRun.runId);
+  const [runTimestamp, setRunTimestamp] = useState(initialRun.timestamp);
   const [contextAge, setContextAge] = useState(new Date(Date.now() - 3 * 60000));
   const [isLoading, setIsLoading] = useState(false);
 
@@ -172,18 +182,27 @@ export default function Dashboard() {
 
   const handleIngestContext = async () => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 1000));
-    setContextAge(new Date());
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/v1/context?refresh=true`);
+      if (res.ok) {
+        setContextAge(new Date());
+      }
+    } catch (e) {
+      console.error("Failed to ingest context:", e);
+    }
     setIsLoading(false);
   };
 
   const handleGenerateRun = async () => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 1500));
-    setCurrentRunId(prev => prev + 1);
-    setRunTimestamp(new Date());
+    try {
+      const result = await generateRun.mutateAsync({});
+      setCurrentRunId(result.run.runId);
+      setRunTimestamp(result.run.timestamp);
+      await refetch();
+    } catch (e) {
+      console.error("Failed to generate run:", e);
+    }
     setIsLoading(false);
   };
 
@@ -212,9 +231,30 @@ export default function Dashboard() {
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
         <div>
-          <h2 className="text-4xl font-display font-bold text-white tracking-tighter mb-2 text-glow">
-            TODAY'S MISSIONS
-          </h2>
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-4xl font-display font-bold text-white tracking-tighter text-glow">
+              TODAY'S MISSIONS
+            </h2>
+            {isDemoMode ? (
+              <Badge variant="outline" className="h-7 px-3 border-secondary text-secondary font-mono text-xs flex items-center gap-1.5">
+                <FlaskConical className="w-3 h-3" />
+                DEMO
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="h-7 px-3 border-accent text-accent font-mono text-xs flex items-center gap-1.5 animate-pulse">
+                <Radio className="w-3 h-3" />
+                LIVE
+              </Badge>
+            )}
+            <div className="flex items-center gap-2 ml-2">
+              <Switch 
+                checked={isDemoMode} 
+                onCheckedChange={setIsDemoMode}
+                className="data-[state=checked]:bg-secondary"
+              />
+              <span className="text-xs text-muted-foreground font-mono">Demo Mode</span>
+            </div>
+          </div>
           <div className="flex items-center gap-2 text-primary font-mono text-sm">
             <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
             {filteredMissions.length} missions active
@@ -224,7 +264,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap">
           <CyberCard className="py-2 px-4 min-w-[140px]" glowColor="secondary">
             <div className="text-xs text-muted-foreground mb-1 font-mono uppercase">Compute Time</div>
             <div className="text-2xl font-mono text-secondary font-bold tabular-nums">
@@ -233,11 +273,21 @@ export default function Dashboard() {
           </CyberCard>
           
           <CyberCard className="py-2 px-4 min-w-[140px]" glowColor={cacheMetric?.status === 'HIT' ? 'accent' : 'destructive'}>
-             <div className="text-xs text-muted-foreground mb-1 font-mono uppercase">Cache Status</div>
+             <div className="text-xs text-muted-foreground mb-1 font-mono uppercase">Cache Hit Rate</div>
              <div className="flex items-center gap-2">
                <div className={`w-3 h-3 rounded-full ${cacheMetric?.status === 'HIT' ? 'bg-accent animate-pulse' : 'bg-destructive'}`} />
                <span className={`text-2xl font-mono font-bold ${cacheMetric?.status === 'HIT' ? 'text-accent' : 'text-destructive'}`}>
-                 {cacheMetric?.status || "Checking..."}
+                 {cacheMetric?.value || "0%"}
+               </span>
+             </div>
+          </CyberCard>
+          
+          <CyberCard className="py-2 px-4 min-w-[120px]" glowColor={redisHealth?.connected ? 'accent' : 'destructive'}>
+             <div className="text-xs text-muted-foreground mb-1 font-mono uppercase">Redis</div>
+             <div className="flex items-center gap-2">
+               <div className={`w-3 h-3 rounded-full ${redisHealth?.connected ? 'bg-accent animate-pulse' : 'bg-destructive animate-pulse'}`} />
+               <span className={`text-lg font-mono font-bold ${redisHealth?.connected ? 'text-accent' : 'text-destructive'}`}>
+                 {redisHealth?.connected ? "ONLINE" : "OFFLINE"}
                </span>
              </div>
           </CyberCard>
@@ -357,8 +407,22 @@ export default function Dashboard() {
             {loadingMissions ? (
                <div className="text-primary/50 font-mono animate-pulse">Scanning database for active missions...</div>
             ) : filteredMissions.length === 0 ? (
-               <div className="text-muted-foreground font-mono p-8 border border-dashed border-white/10 rounded text-center">
-                 {missions?.length === 0 ? "NO ACTIVE MISSIONS DETECTED" : "NO MISSIONS MATCH CURRENT FILTERS"}
+               <div className="text-muted-foreground font-mono p-8 border border-dashed border-white/10 rounded text-center space-y-4">
+                 {missions?.length === 0 ? (
+                   <>
+                     <p className="text-lg">NO MISSIONS FOR TODAY</p>
+                     <p className="text-sm text-muted-foreground">Click "Generate Run" to create your first mission set</p>
+                     <Button 
+                       onClick={handleGenerateRun}
+                       disabled={isLoading}
+                       className="bg-primary hover:bg-primary/80 text-black font-bold"
+                     >
+                       {isLoading ? "GENERATING..." : "GENERATE FIRST RUN"}
+                     </Button>
+                   </>
+                 ) : (
+                   <p>NO MISSIONS MATCH CURRENT FILTERS</p>
+                 )}
                </div>
             ) : (
                filteredMissions.map((mission) => (

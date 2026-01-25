@@ -9,6 +9,8 @@ import { Clock, Calendar, GitCompare, Eye, ChevronRight, TrendingUp } from "luci
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
 interface MissionRun {
   run_id: string;
   generated_at: string;
@@ -33,7 +35,7 @@ export default function MissionRunHistory() {
   const loadRuns = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/missions/runs');
+      const res = await fetch(`${API_BASE}/api/v1/missions/runs`);
       const data = await res.json();
       setRuns(data.data?.runs || []);
     } catch (error) {
@@ -44,20 +46,6 @@ export default function MissionRunHistory() {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const loadRunDetails = async (runId: string) => {
-    try {
-      const res = await fetch(`http://localhost:8000/api/v1/missions/runs/${runId}`);
-      const data = await res.json();
-      setSelectedRun(data.data);
-    } catch (error) {
-      toast({
-        title: "ERROR",
-        description: "Failed to load run details",
-        variant: "destructive",
-      });
     }
   };
 

@@ -89,3 +89,57 @@ async def cache_metrics(request: Request):
     """
     stats = get_cache_stats()
     return JSONResponse(ok(request, stats), status_code=200)
+
+
+@router.get("/metrics/traffic")
+async def traffic_metrics(request: Request):
+    """
+    Get API traffic telemetry for Network Traffic panel.
+    
+    Returns rolling window (60s) metrics:
+        - rps: Requests per second
+        - latency: p50, p95, p99, avg, min, max
+        - error_rate: Percentage of 4xx/5xx responses
+        - top_endpoints: Most frequently called endpoints
+        - status_codes: Distribution by status code bucket
+    """
+    from app.telemetry import get_telemetry_store
+    
+    store = get_telemetry_store()
+    summary = store.get_summary()
+    
+    return JSONResponse(ok(request, summary), status_code=200)
+
+
+@router.get("/metrics/traffic/series")
+async def traffic_time_series(request: Request, bucket_seconds: int = 5):
+    """
+    Get time series data for traffic charts.
+    
+    Returns list of buckets (default 5-second intervals) with:
+        - time: ISO timestamp
+        - rps: Requests per second in bucket
+        - avg_latency_ms: Average latency
+        - errors: Error count
+        - error_rate: Error percentage
+    """
+    from app.telemetry import get_telemetry_store
+    
+    store = get_telemetry_store()
+    series = store.get_time_series(bucket_seconds=bucket_seconds)
+    
+    return JSONResponse(ok(request, {"series": series, "bucket_seconds": bucket_seconds}), status_code=200)
+
+
+@router.get("/metrics/traffic/lifetime")
+async def traffic_lifetime(request: Request):
+    """
+    Get all-time traffic statistics (since server start).
+    """
+    from app.telemetry import get_telemetry_store
+    
+    store = get_telemetry_store()
+    stats = store.get_lifetime_stats()
+    
+    return JSONResponse(ok(request, stats), status_code=200)
+

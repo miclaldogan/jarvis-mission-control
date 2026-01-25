@@ -2,20 +2,42 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-// Type definitions matching backend enums
-type Priority = "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
+// Type definitions matching backend response
+type Priority = "CRITICAL" | "HIGH" | "NORMAL" | "LOW" | "P1" | "P2" | "P3" | "P4";
 type Category = "SYSTEM" | "RECON" | "ENCRYPTION" | "DEFENSE";
-type Status = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+type Status = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED" | "open" | "done" | "snoozed";
 
-interface Mission {
+interface ScoreBreakdown {
+  deadline: number;
+  context: number;
+  energy: number;
+  preference: number;
+}
+
+interface Evidence {
+  sources: string[];
+  confidence: number;
+}
+
+export interface Mission {
   id: string | number;
   title: string;
   priority: Priority;
-  category: Category;
+  priority_score?: number;
+  score_breakdown?: ScoreBreakdown;
+  reasons?: string[];
+  category?: Category;
   status: Status;
+  tags?: string[];
+  why?: string;
+  due_at?: string;
+  dueAt?: string;
+  evidence?: Evidence;
+  actions?: Array<{ label: string; type: string; target: string }>;
   isGlitched?: boolean;
   createdAt?: string;
   created_at?: string;
+  energyRequired?: number;
 }
 
 interface CreateMissionRequest {
@@ -25,55 +47,115 @@ interface CreateMissionRequest {
   status?: Status;
 }
 
-interface SyntheticTask {
-  id: number;
-  title: string;
-  priority: string;
-  status: string;
+// Store current run info
+let currentRunId = 1;
+let currentRunTimestamp = new Date();
+
+export function getCurrentRun() {
+  return { runId: currentRunId, timestamp: currentRunTimestamp };
 }
 
-// GET /api/v1/synthetic/tasks - Use synthetic tasks as missions
+export function incrementRun() {
+  currentRunId++;
+  currentRunTimestamp = new Date();
+  return getCurrentRun();
+}
+
+// GET /api/v1/missions/today - Stable today's mission list (no regeneration on refresh)
 export function useMissions() {
   return useQuery({
-    queryKey: ["missions"],
+    queryKey: ["missions-today"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/v1/synthetic/tasks?n=100000&seed=42`);
-      if (!res.ok) throw new Error("Failed to fetch missions");
+      const res = await fetch(`${API_BASE}/api/v1/missions/today`);
+      if (!res.ok) {
+        // If no missions today, return empty array (will show "generate" prompt)
+        if (res.status === 404) return [];
+        throw new Error("Failed to fetch missions");
+      }
       const json = await res.json();
-      const tasks = json.data.sample as SyntheticTask[];
+      const missions = json.data?.missions || [];
       
-      // Transform synthetic tasks to match Mission interface
-      return tasks.map((task, idx): Mission => {
-        // Map synthetic priority to valid enum
-        const priorityMap: Record<string, Priority> = {
-          "P1": "CRITICAL",
-          "P2": "HIGH",
-          "P3": "NORMAL",
-          "P4": "LOW"
-        };
-        
-        // Cycle through categories
+      // Map backend response to frontend Mission interface
+      return missions.map((m: any, idx: number): Mission => {
         const categories: Category[] = ["SYSTEM", "RECON", "ENCRYPTION", "DEFENSE"];
-        const category = categories[idx % 4];
-        
-        // Map synthetic status to valid enum
-        const statusMap: Record<string, Status> = {
-          "open": "PENDING",
-          "in_progress": "IN_PROGRESS",
-          "done": "COMPLETED",
-          "failed": "FAILED"
-        };
-        
         return {
-          id: task.id,
-          title: task.title,
-          priority: priorityMap[task.priority] || "NORMAL",
-          category,
-          status: statusMap[task.status] || "PENDING",
-          isGlitched: Math.random() > 0.9,
-          createdAt: new Date().toISOString(),
+          id: m.id,
+          title: m.title,
+          priority: m.priority,
+          priority_score: m.priority_score,
+          score_breakdown: m.score_breakdown,
+          reasons: m.reasons || m.score_breakdown?.reasons,
+          category: m.category || categories[idx % 4],
+          status: m.status || "open",
+          tags: m.tags || [],
+          why: m.why,
+          due_at: m.due_at,
+          dueAt: m.due_at,
+          evidence: m.evidence,
+          actions: m.actions,
+          isGlitched: false,
+          createdAt: m.created_at || new Date().toISOString(),
+          energyRequired: Math.floor((m.priority_score || 0.5) * 100),
         };
       });
+    },
+    staleTime: 30000, // 30 seconds - don't refetch constantly
+  });
+}
+
+// Generate new run with missions - saves to today's list
+export function useGenerateRun() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (preferences?: { energy_level?: string }) => {
+      // First generate missions
+      const res = await fetch(`${API_BASE}/api/v1/missions/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          limit: 15,
+          seed: Date.now(),
+          preferences,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to generate run");
+      const json = await res.json();
+      const missions = json.data?.missions || [];
+      
+      // Save generated missions to persistence (so they show in /missions/today)
+      for (const m of missions.slice(0, 10)) { // Save first 10
+        try {
+          await fetch(`${API_BASE}/api/v1/missions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: m.id,
+              title: m.title,
+              priority: m.priority,
+              status: m.status || "open",
+              tags: m.tags || [],
+              why: m.why || "",
+              due_at: m.due_at,
+              priority_score: m.priority_score,
+              score_breakdown: m.score_breakdown,
+              reasons: m.reasons,
+              evidence: m.evidence,
+            }),
+          });
+        } catch (e) {
+          console.warn("Failed to persist mission:", m.id);
+        }
+      }
+      
+      incrementRun();
+      return {
+        run: getCurrentRun(),
+        missions,
+        context: json.data?.context,
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["missions-today"] });
     },
   });
 }

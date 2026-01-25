@@ -19,6 +19,7 @@ from app.api.v1.router import api_router
 from app.http_envelope import err
 from app.metrics import observe_request
 from app.settings import get_settings
+from app.telemetry import record_request
 
 
 logger = logging.getLogger("jarvis")
@@ -102,7 +103,8 @@ def create_app() -> FastAPI:
                 status_code=exc.status_code,
             )
             response = JSONResponse(payload, status_code=status)
-        except Exception:
+        except Exception as exc:
+            logger.exception(f"Unhandled exception: {exc}")
             payload, status = err(
                 request,
                 code="INTERNAL",
@@ -142,6 +144,16 @@ def create_app() -> FastAPI:
             path=request.url.path,
             status=int(getattr(response, "status_code", 0) or 0),
             duration_seconds=duration_s,
+        )
+
+        # Record to telemetry store for Network Traffic panel
+        record_request(
+            endpoint=request.url.path,
+            method=request.method,
+            status_code=int(getattr(response, "status_code", 0) or 0),
+            latency_ms=duration_ms,
+            request_size=int(request.headers.get("content-length", 0)),
+            response_size=int(response.headers.get("content-length", 0)),
         )
 
         return response

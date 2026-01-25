@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import { Cloud, CloudRain, Sun, GitBranch, Calendar, Newspaper, Zap, ArrowRight, Plus, Minus } from "lucide-react";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 interface ScenarioConfig {
   weather: 'sunny' | 'cloudy' | 'rainy';
@@ -44,14 +45,16 @@ export default function SimulationLab() {
     
     try {
       // Generate "before" missions (default scenario)
-      const beforeRes = await fetch('http://localhost:8000/api/v1/simulation/generate', {
+      const beforeRes = await fetch(`${API_BASE}/api/v1/simulation/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          weather: 'sunny',
-          github_issues: 2,
-          calendar_busy: false,
-          news_topic: null,
+          scenario: {
+            weather: 'sunny',
+            github_issues: 2,
+            calendar_busy: false,
+            news_topic: 'none',
+          },
           limit: 5,
         }),
       });
@@ -59,14 +62,16 @@ export default function SimulationLab() {
       setBeforeMissions(beforeData.data?.missions || []);
 
       // Generate "after" missions (custom scenario)
-      const afterRes = await fetch('http://localhost:8000/api/v1/simulation/generate', {
+      const afterRes = await fetch(`${API_BASE}/api/v1/simulation/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          weather: scenario.weather,
-          github_issues: scenario.githubIssues,
-          calendar_busy: scenario.calendarEnabled,
-          news_topic: scenario.newsTopic === 'none' ? null : scenario.newsTopic,
+          scenario: {
+            weather: scenario.weather,
+            github_issues: scenario.githubIssues,
+            calendar_busy: scenario.calendarEnabled,
+            news_topic: scenario.newsTopic,
+          },
           limit: 5,
         }),
       });
@@ -190,7 +195,7 @@ export default function SimulationLab() {
                 </Label>
                 <Switch 
                   checked={scenario.calendarEnabled}
-                  onCheckedChange={(checked) => setScenario({...scenario, calendarEnabled: checked})}
+                  onCheckedChange={(checked: boolean) => setScenario({...scenario, calendarEnabled: checked})}
                 />
               </div>
 

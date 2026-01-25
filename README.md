@@ -56,7 +56,8 @@ Jarvis Mission Control: Akıllı görev yönetim sistemi
 
 ## Repository structure
 - `backend/`: FastAPI app + Dockerfile
-- `frontend/`: placeholder (Dockerfile only for now)
+- `client/`: **Active React frontend** (Vite + React 19 + TanStack Query + shadcn/ui)
+- `frontend/`: Legacy placeholder (deprecated - use `client/` instead)
 - `infra/nginx/`: nginx notes for future deployment
 - `infra/scripts/demo.sh`: instructor-friendly demo (health + cache proof)
 - `docs/`: architecture + API contract + demo steps
