@@ -136,7 +136,7 @@ export function JarvisAbout() {
         <div className="space-y-4 text-sm text-muted-foreground">
           <p>
             Bu proje, modern yazılım geliştirme pratiklerini sergileyen bir 
-            <span className="text-white font-medium"> full-stack web uygulamasıdır</span>. 
+            <span className="text-white font-medium"> full stack demo projesidir</span>. 
             REST API mimarisi, gerçek zamanlı veri işleme, caching stratejileri ve 
             otonom karar verme sistemleri gibi ileri düzey konseptleri içerir.
           </p>

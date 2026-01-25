@@ -222,11 +222,22 @@ async def missions_generate(
     if context is None:
         context = await build_context_snapshot(debug=False)
 
+    # Dedupe: avoid generating missions that already exist in storage.
+    # Key is based on (title, priority, category) to prevent obvious duplicates.
+    existing = storage.get_all_missions()
+    exclude_keys: set[str] = set()
+    for m in existing:
+        title = (m.get("title") or "").strip().lower()
+        priority = (m.get("priority") or "").strip().lower()
+        category = (m.get("category") or "").strip().lower()
+        exclude_keys.add(f"{title}|{priority}|{category}")
+
     missions = generate_missions(
         context=context,
         preferences=body.preferences.model_dump() if body.preferences else None,
         limit=body.limit,
         seed=body.seed,
+        exclude_keys=exclude_keys,
     )
     
     # Store generated missions in memory

@@ -46,6 +46,7 @@ def generate_missions(
     preferences: Optional[dict[str, Any]] = None,
     limit: int = 15,
     seed: Optional[int] = None,
+    exclude_keys: Optional[set[str]] = None,
 ) -> list[dict[str, Any]]:
     """Generate a mission list using rule packs.
 
@@ -58,6 +59,12 @@ def generate_missions(
     rng = random.Random(seed)
     preferences = preferences or {}
     context = context or {}
+
+    def mission_key(*, title: str, priority: str, category: str) -> str:
+        return f"{(title or '').strip().lower()}|{(priority or '').strip().lower()}|{(category or '').strip().lower()}"
+
+    # Keys to avoid generating (e.g., existing DB missions)
+    seen_keys: set[str] = set(exclude_keys or set())
     
     # Get calendar events for conflict detection
     calendar = context.get("calendar") or {}
@@ -75,6 +82,10 @@ def generate_missions(
     missions: list[dict[str, Any]] = []
     
     for idx, gm in enumerate(pack_missions, 1):
+        candidate_key = mission_key(title=gm.title, priority=gm.priority, category=gm.category)
+        if candidate_key in seen_keys:
+            continue
+
         # Calculate dynamic score for consistent scoring
         score = calculate_mission_score(
             due_at=gm.to_dict().get("deadline"),
@@ -124,6 +135,7 @@ def generate_missions(
             },
             "generated_at": _now_iso(),
         })
+        seen_keys.add(candidate_key)
 
     # ═══════════════════════════════════════════════════════════════════
     # PHASE 2: Filler Tasks (if needed)
@@ -207,12 +219,398 @@ def generate_missions(
             "pack": "routine",
             "rule": "meeting_prep",
         },
+        {
+            "title": "Kritik bağımlılık güncellemelerini kontrol et",
+            "priority": "P2",
+            "category": "work",
+            "energy_cost": "medium",
+            "duration_minutes": 20,
+            "tags": ["maintenance", "deps"],
+            "why": "Küçük güncellemeler, büyük hataları önler.",
+            "pack": "maintenance",
+            "rule": "deps_review",
+        },
+        {
+            "title": "Kısa kod inceleme: son PR'ları tara",
+            "priority": "P2",
+            "category": "work",
+            "energy_cost": "medium",
+            "duration_minutes": 15,
+            "tags": ["code-review", "quality"],
+            "why": "Erken inceleme, riskleri azaltır.",
+            "pack": "quality",
+            "rule": "quick_review",
+        },
+        {
+            "title": "Testleri çalıştır ve kırıkları not et",
+            "priority": "P2",
+            "category": "work",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["tests", "quality"],
+            "why": "Günlük test koşumu regressions yakalar.",
+            "pack": "quality",
+            "rule": "daily_tests",
+        },
+        {
+            "title": "Dokümantasyonda 1 iyileştirme yap",
+            "priority": "P3",
+            "category": "admin",
+            "energy_cost": "low",
+            "duration_minutes": 15,
+            "tags": ["docs", "maintenance"],
+            "why": "Demo/kurulum dokümanı ekip hızını artırır.",
+            "pack": "maintenance",
+            "rule": "docs_update",
+        },
+        {
+            "title": "Log'larda hata/uyarı var mı kontrol et",
+            "priority": "P3",
+            "category": "system",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["ops", "monitoring"],
+            "why": "Küçük uyarılar büyümeden yakalanır.",
+            "pack": "ops",
+            "rule": "log_review",
+        },
+        {
+            "title": "Cache demo için aynı seed ile tekrar dene",
+            "priority": "P3",
+            "category": "study",
+            "energy_cost": "low",
+            "duration_minutes": 5,
+            "tags": ["cache", "redis", "demo"],
+            "why": "HIT/MISS davranışını gözlemlemek için stabil seed kullan.",
+            "pack": "demo",
+            "rule": "cache_proof",
+        },
+        {
+            "title": "Kısa mola: 10 derin nefes",
+            "priority": "P4",
+            "category": "health",
+            "energy_cost": "low",
+            "duration_minutes": 2,
+            "tags": ["health", "focus"],
+            "why": "Kısa nefes egzersizi odak resetler.",
+            "pack": "routine",
+            "rule": "breathing",
+        },
+        {
+            "title": "5dk yürüyüş (odak reset)",
+            "priority": "P4",
+            "category": "health",
+            "energy_cost": "low",
+            "duration_minutes": 5,
+            "tags": ["health", "break"],
+            "why": "Kısa hareket kan dolaşımını artırır ve odak tazeler.",
+            "pack": "routine",
+            "rule": "walk_break",
+        },
+        {
+            "title": "Günün 1 önceliğini netleştir",
+            "priority": "P3",
+            "category": "admin",
+            "energy_cost": "low",
+            "duration_minutes": 5,
+            "tags": ["planning", "focus"],
+            "why": "Tek bir odak noktası seçmek dağılmayı azaltır.",
+            "pack": "routine",
+            "rule": "single_priority",
+        },
+        {
+            "title": "Bugün için 1 küçük teslim edilebilir çıktıyı seç",
+            "priority": "P3",
+            "category": "work",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["planning", "delivery"],
+            "why": "Küçük ama tamamlanabilir hedefler momentum sağlar.",
+            "pack": "delivery",
+            "rule": "small_win",
+        },
+        {
+            "title": "PR/branch listesini gözden geçir",
+            "priority": "P3",
+            "category": "work",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["git", "hygiene"],
+            "why": "Dallanma/PR hijyeni merge risklerini azaltır.",
+            "pack": "quality",
+            "rule": "branch_hygiene",
+        },
+        {
+            "title": "1 test ekle veya flaky testi işaretle",
+            "priority": "P2",
+            "category": "work",
+            "energy_cost": "medium",
+            "duration_minutes": 20,
+            "tags": ["tests", "quality"],
+            "why": "Küçük test iyileştirmeleri regresyonları erken yakalar.",
+            "pack": "quality",
+            "rule": "add_or_tag_test",
+        },
+        {
+            "title": "Log seviyelerini kontrol et (INFO/WARN/ERROR)",
+            "priority": "P3",
+            "category": "system",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["ops", "logging"],
+            "why": "Gereksiz gürültü gerçek hataları gizlemesin.",
+            "pack": "ops",
+            "rule": "log_levels",
+        },
+        {
+            "title": "Docker compose ile hızlı health-check turu",
+            "priority": "P2",
+            "category": "system",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["docker", "ops"],
+            "why": "Servisler ayakta mı? Demo öncesi hızlı doğrulama.",
+            "pack": "ops",
+            "rule": "compose_health",
+        },
+        {
+            "title": "API sözleşmesini (docs) 1 kez gözden geçir",
+            "priority": "P3",
+            "category": "study",
+            "energy_cost": "low",
+            "duration_minutes": 15,
+            "tags": ["docs", "api"],
+            "why": "Sözleşme tutarlılığı demo akışını rahatlatır.",
+            "pack": "maintenance",
+            "rule": "api_contract_review",
+        },
+        {
+            "title": "Context snapshot alanlarını hızlı kontrol et",
+            "priority": "P3",
+            "category": "study",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["context", "schema"],
+            "why": "Context şeması stabil kalırsa skorlar ve UI daha güvenilir olur.",
+            "pack": "maintenance",
+            "rule": "context_schema_check",
+        },
+        {
+            "title": "Redis cache anahtar formatını örnekle doğrula",
+            "priority": "P2",
+            "category": "system",
+            "energy_cost": "medium",
+            "duration_minutes": 15,
+            "tags": ["redis", "cache"],
+            "why": "Tutarlı key formatı hit-rate’i artırır.",
+            "pack": "demo",
+            "rule": "redis_key_check",
+        },
+        {
+            "title": "Frontend prod build al (vite) ve hata var mı bak",
+            "priority": "P2",
+            "category": "work",
+            "energy_cost": "medium",
+            "duration_minutes": 15,
+            "tags": ["frontend", "build"],
+            "why": "Demo öncesi build kırığı sürpriz olmasın.",
+            "pack": "ops",
+            "rule": "frontend_build",
+        },
+        {
+            "title": "Backend testlerini hızlı koş (pytest -q)",
+            "priority": "P2",
+            "category": "work",
+            "energy_cost": "medium",
+            "duration_minutes": 15,
+            "tags": ["backend", "tests"],
+            "why": "Kritik endpoint’ler sağlamsa demo daha rahat.",
+            "pack": "quality",
+            "rule": "backend_pytest_quick",
+        },
+        {
+            "title": "Rate limit davranışını 1 örnek istekle doğrula",
+            "priority": "P3",
+            "category": "system",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["rate-limit", "api"],
+            "why": "Limitler beklenmedik 429 üretmesin.",
+            "pack": "ops",
+            "rule": "rate_limit_check",
+        },
+        {
+            "title": "Open missions listesini gözden geçir, 1 tanesini kapat",
+            "priority": "P3",
+            "category": "admin",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["workflow", "cleanup"],
+            "why": "Küçük kapanışlar ilerleme hissini artırır.",
+            "pack": "routine",
+            "rule": "close_one",
+        },
+        {
+            "title": "Demo akışını 3 maddeyle not al",
+            "priority": "P2",
+            "category": "admin",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["demo", "planning"],
+            "why": "Kısa demo script’i stres azaltır.",
+            "pack": "demo",
+            "rule": "demo_notes",
+        },
+        {
+            "title": "UI'da 1 küçük metin/etiket tutarlılığını düzelt",
+            "priority": "P3",
+            "category": "work",
+            "energy_cost": "low",
+            "duration_minutes": 15,
+            "tags": ["ui", "polish"],
+            "why": "Tutarlı metinler kullanıcı güvenini artırır.",
+            "pack": "quality",
+            "rule": "ui_copy_fix",
+        },
+        {
+            "title": "Bir endpoint için örnek curl komutu ekle",
+            "priority": "P3",
+            "category": "admin",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["docs", "api"],
+            "why": "Kullanım örnekleri onboarding'i hızlandırır.",
+            "pack": "maintenance",
+            "rule": "add_curl_example",
+        },
+        {
+            "title": "Bir hata senaryosu için kullanıcı mesajını doğrula",
+            "priority": "P3",
+            "category": "work",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["ux", "errors"],
+            "why": "Net hata mesajı debug süresini kısaltır.",
+            "pack": "quality",
+            "rule": "error_message_check",
+        },
+        {
+            "title": "Missions generate limitini 1 kez 30 ile dene",
+            "priority": "P3",
+            "category": "study",
+            "energy_cost": "low",
+            "duration_minutes": 5,
+            "tags": ["missions", "demo"],
+            "why": "Limit davranışı demo sırasında sürpriz olmasın.",
+            "pack": "demo",
+            "rule": "generate_max_limit",
+        },
+        {
+            "title": "Context sayfasında source sayısını kontrol et",
+            "priority": "P3",
+            "category": "study",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["context", "ui"],
+            "why": "Kaynak sayıları beklenen aralıkta mı kontrol et.",
+            "pack": "demo",
+            "rule": "context_sources_check",
+        },
+        {
+            "title": "System vitals metriklerini hızlı gözden geçir",
+            "priority": "P3",
+            "category": "system",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["metrics", "ops"],
+            "why": "CPU/RAM/latency trendleri erken uyarı sağlar.",
+            "pack": "ops",
+            "rule": "vitals_review",
+        },
+        {
+            "title": "Nginx/Proxy konfigini 1 kez kontrol et",
+            "priority": "P3",
+            "category": "system",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["nginx", "ops"],
+            "why": "Proxy ayarları doğruysa prod deneyimi stabil olur.",
+            "pack": "ops",
+            "rule": "nginx_check",
+        },
+        {
+            "title": "README'de kurulum adımlarını 1 kez takip et",
+            "priority": "P3",
+            "category": "admin",
+            "energy_cost": "low",
+            "duration_minutes": 15,
+            "tags": ["docs", "onboarding"],
+            "why": "Doküman, gerçek kullanımda çalışıyor mu doğrula.",
+            "pack": "maintenance",
+            "rule": "readme_walkthrough",
+        },
+        {
+            "title": "1 küçük refactor: isimlendirme/tutarlılık",
+            "priority": "P3",
+            "category": "work",
+            "energy_cost": "medium",
+            "duration_minutes": 20,
+            "tags": ["refactor", "quality"],
+            "why": "Küçük refactor’lar uzun vadeli bakım maliyetini düşürür.",
+            "pack": "quality",
+            "rule": "small_refactor",
+        },
+        {
+            "title": "Güncel bağımlılık lisanslarını hızlı tarama",
+            "priority": "P3",
+            "category": "work",
+            "energy_cost": "low",
+            "duration_minutes": 15,
+            "tags": ["license", "compliance"],
+            "why": "Lisans sürprizleri ileride sorun çıkarabilir.",
+            "pack": "maintenance",
+            "rule": "license_scan",
+        },
+        {
+            "title": "Sentry/telemetry ayarlarını kontrol et (varsa)",
+            "priority": "P4",
+            "category": "system",
+            "energy_cost": "low",
+            "duration_minutes": 10,
+            "tags": ["telemetry", "ops"],
+            "why": "Gözlemlenebilirlik demo sırasında debug'u kolaylaştırır.",
+            "pack": "ops",
+            "rule": "telemetry_check",
+        },
+        {
+            "title": "Günün sonunda 2 satır öğrenim notu çıkar",
+            "priority": "P4",
+            "category": "study",
+            "energy_cost": "low",
+            "duration_minutes": 5,
+            "tags": ["learning", "routine"],
+            "why": "Kısa öğrenim notları kalıcılığı artırır.",
+            "pack": "routine",
+            "rule": "learning_note",
+        },
     ]
 
     used_fillers: set[str] = set()
     
-    while len(missions) < limit and len(used_fillers) < len(filler_tasks):
-        filler = rng.choice([f for f in filler_tasks if f["title"] not in used_fillers])
+    while len(missions) < limit:
+        remaining = []
+        for f in filler_tasks:
+            key = mission_key(title=f["title"], priority=f["priority"], category=f["category"])
+            if f["title"] in used_fillers:
+                continue
+            if key in seen_keys:
+                continue
+            remaining.append((f, key))
+
+        if not remaining:
+            break
+
+        filler, filler_key = rng.choice(remaining)
         used_fillers.add(filler["title"])
 
         score = calculate_mission_score(
@@ -256,6 +654,7 @@ def generate_missions(
             },
             "generated_at": _now_iso(),
         })
+        seen_keys.add(filler_key)
 
     # ═══════════════════════════════════════════════════════════════════
     # PHASE 3: Sort by priority and return
