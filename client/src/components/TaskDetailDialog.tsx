@@ -66,15 +66,16 @@ export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange }
     'FAILED': 'text-destructive border-destructive/50 bg-destructive/10',
   };
 
-  const scoreBreakdown = mission.score_breakdown || {
-    deadline: 0,
-    context: 0,
-    energy: 0,
-    preference: 0,
+  // Safely extract score breakdown with defaults
+  const scoreBreakdown = {
+    deadline: Number(mission.score_breakdown?.deadline) || 0,
+    context: Number(mission.score_breakdown?.context) || 0,
+    energy: Number(mission.score_breakdown?.energy) || 0,
+    preference: Number(mission.score_breakdown?.preference) || 0,
   };
 
-  const totalScore = mission.priority_score || 
-    (scoreBreakdown.deadline + scoreBreakdown.context + scoreBreakdown.energy + scoreBreakdown.preference);
+  const totalScore = Number(mission.priority_score) || 
+    (scoreBreakdown.deadline + scoreBreakdown.context + scoreBreakdown.energy + scoreBreakdown.preference) || 0;
 
   const handleStatusChange = (newStatus: string) => {
     if (onStatusChange) {
@@ -258,7 +259,9 @@ interface ScoreBarProps {
 }
 
 function ScoreBar({ label, icon: Icon, value, color }: ScoreBarProps) {
-  const percentage = (value * 100).toFixed(0);
+  // Safely handle undefined/NaN values
+  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
+  const percentage = (safeValue * 100).toFixed(0);
   
   return (
     <div className="space-y-1">
@@ -268,11 +271,11 @@ function ScoreBar({ label, icon: Icon, value, color }: ScoreBarProps) {
           <span className="text-muted-foreground">{label}</span>
         </div>
         <span className={cn("font-bold tabular-nums", color)}>
-          {value.toFixed(2)} ({percentage}%)
+          {safeValue.toFixed(2)} ({percentage}%)
         </span>
       </div>
       <Progress 
-        value={value * 100} 
+        value={safeValue * 100} 
         className="h-2 bg-white/5"
         indicatorClassName={cn("transition-all", color.replace('text-', 'bg-'))}
       />

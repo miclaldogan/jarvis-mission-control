@@ -309,6 +309,41 @@ DEFAULT_RULES: list[Rule] = [
         priority=2,
         cooldown_seconds=1800,
     ),
+    
+    # News-Based Rules
+    Rule(
+        id="rule_news_tech_alert",
+        name="Tech News Alert",
+        description="Teknoloji haberlerinde önemli gelişme",
+        conditions=[
+            Condition("news", "has_items", Operator.EQ, True),
+        ],
+        action=Action(ActionType.CREATE_MISSION, "tech_news_review"),
+        priority=3,
+        cooldown_seconds=3600,  # 1 hour cooldown
+    ),
+    Rule(
+        id="rule_news_security",
+        name="Security News Alert",
+        description="Güvenlik haberlerinde kritik gelişme",
+        conditions=[
+            Condition("news", "security_alert", Operator.EQ, True),
+        ],
+        action=Action(ActionType.CREATE_MISSION, "security_review"),
+        priority=1,
+        cooldown_seconds=1800,
+    ),
+    Rule(
+        id="rule_news_ai_update",
+        name="AI News Alert",
+        description="Yapay zeka alanında önemli gelişme",
+        conditions=[
+            Condition("news", "ai_related", Operator.EQ, True),
+        ],
+        action=Action(ActionType.CREATE_MISSION, "ai_research"),
+        priority=2,
+        cooldown_seconds=7200,
+    ),
 ]
 
 
@@ -397,6 +432,44 @@ MISSION_TEMPLATES: dict[str, dict[str, Any]] = {
         "duration_minutes": 15,
         "tags": ["exchange", "finance", "risk"],
         "why": "Döviz kurunda volatilite. Finansal pozisyonları gözden geçir.",
+    },
+    
+    # News-Based Templates
+    "tech_news_review": {
+        "title": "📰 Tech News: Güncel Gelişmeleri İncele",
+        "priority": "P3",
+        "category": "research",
+        "energy_cost": "low",
+        "duration_minutes": 20,
+        "tags": ["news", "tech", "reading", "research"],
+        "why": "Hacker News'te önemli teknoloji haberleri var. Sektördeki gelişmeleri takip etmek kariyerin için önemli.",
+    },
+    "security_review": {
+        "title": "🔒 Güvenlik Uyarısı: CVE/Vulnerability Kontrolü",
+        "priority": "P1",
+        "category": "security",
+        "energy_cost": "high",
+        "duration_minutes": 30,
+        "tags": ["news", "security", "vulnerability", "critical"],
+        "why": "Güvenlik açığı haberi algılandı! Sistemlerini ve bağımlılıklarını kontrol et, gerekli güncellemeleri yap.",
+    },
+    "ai_research": {
+        "title": "🤖 AI Araştırma: Yeni Gelişmeleri İncele",
+        "priority": "P2",
+        "category": "research",
+        "energy_cost": "medium",
+        "duration_minutes": 45,
+        "tags": ["news", "ai", "research", "learning"],
+        "why": "Yapay zeka alanında önemli gelişmeler var. Bu teknolojileri projelerinde nasıl kullanabileceğini araştır.",
+    },
+    "trending_review": {
+        "title": "📊 Trend Analizi: Gündem Takibi",
+        "priority": "P4",
+        "category": "research",
+        "energy_cost": "low",
+        "duration_minutes": 15,
+        "tags": ["trending", "analysis", "awareness"],
+        "why": "Gündemde önemli konular var. Sosyal ve teknolojik trendleri takip etmek farkındalık kazandırır.",
     },
 }
 

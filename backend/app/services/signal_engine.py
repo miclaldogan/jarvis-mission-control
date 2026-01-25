@@ -155,6 +155,7 @@ class SignalEngine:
         signals.extend(self._analyze_weather(context.get("weather") or {}))
         signals.extend(self._analyze_exchange(context.get("exchange") or {}))
         signals.extend(self._analyze_calendar(context.get("calendar") or {}))
+        signals.extend(self._analyze_news(context.get("news") or []))
         
         return signals
     
@@ -385,6 +386,111 @@ class SignalEngine:
                     delta=events_today - baseline if baseline else None,
                     message=f"📆 Yoğun gün: {events_today} etkinlik planlandı",
                 ))
+        
+        return signals
+    
+    def _analyze_news(self, news: list[dict[str, Any]]) -> list[Signal]:
+        """
+        Analyze news items for tech trends, security alerts, and AI developments.
+        Uses keyword matching to classify news importance.
+        """
+        signals = []
+        
+        if not news or not isinstance(news, list):
+            return signals
+        
+        # Keywords for classification
+        security_keywords = [
+            "vulnerability", "cve", "exploit", "breach", "hack", "security",
+            "malware", "ransomware", "attack", "zero-day", "critical"
+        ]
+        ai_keywords = [
+            "ai", "gpt", "llm", "machine learning", "neural", "openai",
+            "anthropic", "google ai", "deepmind", "chatgpt", "claude",
+            "artificial intelligence", "generative", "transformer"
+        ]
+        tech_keywords = [
+            "react", "python", "rust", "go", "javascript", "typescript",
+            "kubernetes", "docker", "aws", "azure", "github", "api",
+            "startup", "funding", "ipo", "acquisition"
+        ]
+        
+        has_security = False
+        has_ai = False
+        has_tech = False
+        news_count = len(news)
+        
+        for item in news:
+            title = (item.get("title") or "").lower()
+            
+            # Check for security news
+            if any(kw in title for kw in security_keywords):
+                has_security = True
+            
+            # Check for AI news
+            if any(kw in title for kw in ai_keywords):
+                has_ai = True
+            
+            # Check for general tech news
+            if any(kw in title for kw in tech_keywords):
+                has_tech = True
+        
+        # Emit signals based on detected content
+        if news_count > 0:
+            signals.append(Signal(
+                id=self._generate_signal_id(),
+                type=SignalType.STABLE,
+                severity=SignalSeverity.LOW,
+                source="news",
+                metric="has_items",
+                value=1 if news_count > 0 else 0,
+                baseline=None,
+                threshold=None,
+                delta=None,
+                message=f"📰 {news_count} haber makalesi mevcut",
+            ))
+        
+        if has_security:
+            signals.append(Signal(
+                id=self._generate_signal_id(),
+                type=SignalType.ANOMALY,
+                severity=SignalSeverity.CRITICAL,
+                source="news",
+                metric="security_alert",
+                value=1,
+                baseline=None,
+                threshold=None,
+                delta=None,
+                message="🔒 Güvenlik ile ilgili kritik haber algılandı!",
+            ))
+        
+        if has_ai:
+            signals.append(Signal(
+                id=self._generate_signal_id(),
+                type=SignalType.ANOMALY,
+                severity=SignalSeverity.MEDIUM,
+                source="news",
+                metric="ai_related",
+                value=1,
+                baseline=None,
+                threshold=None,
+                delta=None,
+                message="🤖 Yapay zeka ile ilgili önemli haber algılandı",
+            ))
+        
+        if has_tech and not has_security and not has_ai:
+            signals.append(Signal(
+                id=self._generate_signal_id(),
+                type=SignalType.STABLE,
+                severity=SignalSeverity.LOW,
+                source="news",
+                metric="tech_update",
+                value=1,
+                baseline=None,
+                threshold=None,
+                delta=None,
+                message="💻 Teknoloji haberleri güncel",
+            ))
         
         return signals
     

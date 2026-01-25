@@ -100,7 +100,7 @@ export default function Dashboard() {
   const computeMetric = getMetric("Compute Time");
 
   const form = useForm<InsertMission>({
-    resolver: zodResolver(insertMissionSchema),
+    resolver: zodResolver(insertMissionSchema as any),
     defaultValues: {
       title: "",
       priority: "NORMAL",
@@ -146,7 +146,7 @@ export default function Dashboard() {
     }
     if (deadline !== "all") {
       result = result.filter(m => {
-        if (!m.dueAt) return deadline === "all";
+        if (!m.dueAt) return false;
         const dueDate = new Date(m.dueAt);
         switch (deadline) {
           case "today": return isToday(dueDate);
@@ -189,9 +189,24 @@ export default function Dashboard() {
   const handleIngestContext = async () => {
     setIsLoading(true);
     try {
+      // First refresh context
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/v1/context?refresh=true`);
       if (res.ok) {
         setContextAge(new Date());
+        
+        // Then trigger brain processing to generate missions from fresh context
+        const brainRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/v1/brain/process`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        
+        if (brainRes.ok) {
+          const brainData = await brainRes.json();
+          // Refetch missions to get newly generated ones
+          await refetch();
+          console.log("Brain processed:", brainData);
+        }
       }
     } catch (e) {
       console.error("Failed to ingest context:", e);
