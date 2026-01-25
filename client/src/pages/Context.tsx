@@ -3,6 +3,7 @@ import { CyberCard } from "@/components/CyberCard";
 import { useContextItems } from "@/hooks/use-context";
 import { useSystemVitals } from "@/hooks/use-system-vitals";
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { 
   CloudRain, 
   Github, 
@@ -37,8 +38,58 @@ export default function Context() {
     return localStorage.getItem('jarvis-selected-city') || 'Istanbul';
   });
 
-  const { data: context, isLoading } = useContextItems(selectedCity);
+  const queryClient = useQueryClient();
+  const { data: context, isLoading, refetch } = useContextItems(selectedCity);
   const { data: vitals } = useSystemVitals();
+
+  const [nextRefreshAt, setNextRefreshAt] = useState<number>(() => Date.now() + 10 * 60 * 1000);
+  const [secondsLeft, setSecondsLeft] = useState<number>(10 * 60);
+  const [contextCache, setContextCache] = useState<string>("");
+
+  useEffect(() => {
+    // Align countdown with the hook's 10-minute refetch cadence.
+    setNextRefreshAt(Date.now() + 10 * 60 * 1000);
+  }, [selectedCity]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const left = Math.max(0, Math.floor((nextRefreshAt - Date.now()) / 1000));
+      setSecondsLeft(left);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [nextRefreshAt]);
+
+  const forceRefreshNow = async () => {
+    const url = new URL(`/api/v1/context`, window.location.origin);
+    url.searchParams.set("refresh", "true");
+    if (selectedCity) url.searchParams.set("city", selectedCity);
+
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error("Failed to refresh context");
+
+    const cache = res.headers.get("X-Cache") || "";
+    setContextCache(cache);
+
+    const json = await res.json();
+    queryClient.setQueryData(["context", selectedCity], json.data);
+    setNextRefreshAt(Date.now() + 10 * 60 * 1000);
+  };
+
+  useEffect(() => {
+    // Capture cache header for normal (refresh=false) fetches as well.
+    // We can't read headers from react-query's internal fetch result, so do a light HEAD-like fetch once per load.
+    (async () => {
+      try {
+        const url = new URL(`/api/v1/context`, window.location.origin);
+        url.searchParams.set("refresh", "false");
+        if (selectedCity) url.searchParams.set("city", selectedCity);
+        const res = await fetch(url.toString());
+        if (res.ok) setContextCache(res.headers.get("X-Cache") || "");
+      } catch {
+        // ignore
+      }
+    })();
+  }, [selectedCity]);
 
   useEffect(() => {
     localStorage.setItem('jarvis-selected-city', selectedCity);
@@ -174,6 +225,24 @@ export default function Context() {
         {/* News Ticker */}
         <div className="lg:col-span-2 h-[360px]">
           <CyberCard title="INTELLIGENCE FEED" glowColor="primary" className="h-full">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs font-mono text-muted-foreground">
+                Next refresh in {String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:{String(secondsLeft % 60).padStart(2, "0")}
+                {contextCache ? ` • cache=${contextCache}` : ""}
+              </div>
+              <button
+                onClick={() => {
+                  forceRefreshNow().catch(() => {
+                    // fall back to query refetch
+                    refetch();
+                    setNextRefreshAt(Date.now() + 10 * 60 * 1000);
+                  });
+                }}
+                className="text-xs font-mono text-primary hover:text-white border border-primary/30 hover:border-primary/60 px-3 py-1 rounded"
+              >
+                Refresh now
+              </button>
+            </div>
             <div className="h-[300px] overflow-y-auto space-y-3 pr-2">
               {context?.news && context.news.length > 0 ? (
                 context.news.map((news, i) => (

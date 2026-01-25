@@ -143,6 +143,17 @@ export default function Dashboard() {
     return "all";
   };
 
+  const normalizeCategory = (c?: string): FilterCategory => {
+    const raw = (c || "").toLowerCase();
+    if (!raw) return "all";
+    if (raw === "study") return "learning";
+    if (raw === "admin") return "work";
+    if (raw === "work" || raw === "health" || raw === "learning" || raw === "social" || raw === "personal") {
+      return raw as FilterCategory;
+    }
+    return "all";
+  };
+
   // Filter and sort missions
   const filteredMissions = useMemo(() => {
     if (!missions) return [];
@@ -151,7 +162,7 @@ export default function Dashboard() {
 
     // Apply filters
     if (category !== "all") {
-      result = result.filter(m => m.category?.toLowerCase() === category);
+      result = result.filter(m => normalizeCategory(m.category) === category);
     }
     if (priority !== "all") {
       result = result.filter(m => normalizePriority(m.priority) === priority);
@@ -601,7 +612,21 @@ export default function Dashboard() {
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         onStatusChange={(missionId, newStatus) => {
-          updateMissionStatus.mutate({ missionId: String(missionId), newStatus });
+          updateMissionStatus.mutate(
+            { missionId: String(missionId), newStatus },
+            {
+              onSuccess: (resp: any) => {
+                const updated = resp?.data?.mission;
+                if (updated) {
+                  // Update the open dialog immediately; list refresh comes from query invalidation.
+                  setSelectedMission((prev: any) => ({
+                    ...(prev || {}),
+                    ...updated,
+                  }));
+                }
+              },
+            }
+          );
         }}
         onDelete={(missionId) => {
           deleteMission.mutate(String(missionId), {

@@ -35,6 +35,7 @@ class Mission:
     priority: Priority = "P3"
     status: Status = "open"
     tags: list[str] = field(default_factory=list)
+    category: str = ""
     why: str = ""
     due_at: Optional[str] = None
     completed_at: Optional[str] = None
@@ -144,6 +145,7 @@ CREATE TABLE IF NOT EXISTS missions (
     priority TEXT DEFAULT 'P3',
     status TEXT DEFAULT 'open',
     tags TEXT DEFAULT '[]',  -- JSON array
+    category TEXT DEFAULT '',
     why TEXT DEFAULT '',
     due_at TEXT,
     completed_at TEXT,

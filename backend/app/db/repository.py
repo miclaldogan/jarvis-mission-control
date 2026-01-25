@@ -52,10 +52,10 @@ class MissionRepository:
             conn.execute(
                 """
                 INSERT INTO missions (
-                    id, title, priority, status, tags, why, due_at,
+                    id, title, priority, status, tags, category, why, due_at,
                     completed_at, created_at, updated_at, evidence,
                     actions, priority_score, score_breakdown, reasons
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     mission.id,
@@ -63,6 +63,7 @@ class MissionRepository:
                     mission.priority,
                     mission.status,
                     json.dumps(mission.tags),
+                    mission.category,
                     mission.why,
                     mission.due_at,
                     mission.completed_at,
@@ -143,7 +144,7 @@ class MissionRepository:
         execute_write(
             """
             UPDATE missions SET
-                title = ?, priority = ?, status = ?, tags = ?, why = ?,
+                title = ?, priority = ?, status = ?, tags = ?, category = ?, why = ?,
                 due_at = ?, completed_at = ?, updated_at = ?, evidence = ?,
                 actions = ?, priority_score = ?, score_breakdown = ?, reasons = ?
             WHERE id = ?
@@ -153,6 +154,7 @@ class MissionRepository:
                 mission.priority,
                 mission.status,
                 json.dumps(mission.tags),
+                mission.category,
                 mission.why,
                 mission.due_at,
                 mission.completed_at,
@@ -268,6 +270,7 @@ class MissionRepository:
             priority=row["priority"],
             status=row["status"],
             tags=json.loads(row["tags"]) if row["tags"] else [],
+            category=row.get("category") or "",
             why=row["why"] or "",
             due_at=row["due_at"],
             completed_at=row["completed_at"],

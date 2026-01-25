@@ -44,7 +44,8 @@ export function useContextItems(city?: string) {
     queryKey: ["context", city],
     queryFn: async () => {
       const url = new URL(`${API_BASE}/api/v1/context`);
-      url.searchParams.set("refresh", "true");
+      // Default to cache-friendly reads; callers can force refresh manually.
+      url.searchParams.set("refresh", "false");
       if (city) {
         url.searchParams.set("city", city);
       }
@@ -53,6 +54,6 @@ export function useContextItems(city?: string) {
       const json = await res.json();
       return json.data as ContextData;
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 10 * 60 * 1000, // Refresh every 10 minutes
   });
 }

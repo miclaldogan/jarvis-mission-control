@@ -15,7 +15,8 @@ COPY public/ ./public/
 COPY index.html tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts tailwind.config.ts postcss.config.js components.json ./
 
 # Build with production API URL
-ARG VITE_API_BASE_URL=http://localhost:8000
+# Default empty so the app uses same-origin requests to /api (served by nginx proxy).
+ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 

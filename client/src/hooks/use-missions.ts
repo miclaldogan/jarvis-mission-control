@@ -67,6 +67,14 @@ export interface Mission {
   energyRequired?: number;
 }
 
+function toUiCategory(category: unknown): string | undefined {
+  const raw = (typeof category === "string" ? category : "").trim().toLowerCase();
+  if (!raw) return undefined;
+  if (raw === "study") return "learning";
+  if (raw === "admin") return "work";
+  return raw;
+}
+
 interface CreateMissionRequest {
   title: string;
   priority: Priority;
@@ -112,7 +120,7 @@ export function useMissions() {
           priority_score: m.priority_score,
           score_breakdown: m.score_breakdown,
           reasons: m.reasons || m.score_breakdown?.reasons,
-          category: m.category || categories[idx % 4],
+          category: (toUiCategory(m.category) as any) || categories[idx % 4],
           status: toUiStatus(m.status),
           tags: m.tags || [],
           why: m.why,
@@ -222,15 +230,29 @@ export function useBulkCreateMissions() {
     mutationFn: async (count: number) => {
       // Synthetic tasks endpoint only accepts 100000 or 1000000
       const validN = count >= 1000000 ? 1000000 : 100000;
-      const res = await fetch(
-        `${API_BASE}/api/v1/synthetic/tasks?n=${validN}&seed=${Date.now()}`
-      );
+      const seed = Date.now();
+      const res = await fetch(`${API_BASE}/api/v1/synthetic/tasks?n=${validN}&seed=${seed}`);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error?.message || "Failed to bulk create missions");
       }
       const json = await res.json();
-      return { message: `Generated ${json.data.sample.length} tasks from ${validN} total`, count: json.data.sample.length };
+
+      const cacheStatus = res.headers.get("X-Cache") || "";
+      const cacheKey = res.headers.get("X-Cache-Key") || "";
+      const computeMs = res.headers.get("X-Compute-Time-ms") || "";
+
+      const sampleCount = (json.data?.sample || []).length;
+      const totalN = json.data?.n ?? validN;
+      return {
+        total: totalN,
+        sampleCount,
+        seed: json.data?.seed ?? seed,
+        cacheStatus,
+        cacheKey,
+        computeMs,
+        message: `Preview sample: ${sampleCount} tasks (n=${totalN})${cacheStatus ? ` [cache=${cacheStatus}]` : ""}`,
+      };
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["missions-today"] }),
   });

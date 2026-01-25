@@ -84,7 +84,7 @@ export default function Lab() {
     addLog("═══════════════════════════════════════════════", "header");
     addLog("");
     addLog(`Target Count: ${taskCount.toLocaleString()} synthetic tasks`);
-    addLog(`Endpoint: POST /api/v1/missions/bulk`);
+    addLog(`Endpoint: GET /api/v1/synthetic/tasks?n=${taskCount.toLocaleString()}&seed=...`);
     addLog("");
     addLog("Initializing virtual memory allocation...");
     
@@ -104,15 +104,19 @@ export default function Lab() {
         addLog("═══════════════════════════════════════════════", "header");
         addLog("📊 GENERATION COMPLETE", "header");
         addLog("═══════════════════════════════════════════════", "header");
-        addLog(`Tasks Created: ${data.count?.toLocaleString() || taskCount.toLocaleString()}`, "success");
+        addLog(`Requested Total (n): ${(data.total ?? taskCount).toLocaleString()}`, "success");
+        addLog(`Preview Returned: ${(data.sampleCount ?? 0).toLocaleString()} tasks`, "success");
         addLog(`Status: ${data.message || "SUCCESS"}`, "success");
+        if (data.cacheStatus) addLog(`Cache: ${data.cacheStatus}`, data.cacheStatus === "HIT" ? "success" : "info");
+        if (data.computeMs) addLog(`Compute: ${data.computeMs}ms`, "data");
+        if (data.cacheKey) addLog(`Cache-Key: ${data.cacheKey}`, "data");
         addLog(`Timestamp: ${new Date().toISOString()}`, "data");
         addLog("");
         addLog("✅ SIMULATION COMPLETE", "success");
         setSimulationRunning(false);
         toast({
           title: "SIMULATION COMPLETE",
-          description: `Successfully generated ${data.count?.toLocaleString() || taskCount.toLocaleString()} tasks.`,
+          description: `Previewed ${(data.sampleCount ?? 0).toLocaleString()} tasks (n=${(data.total ?? taskCount).toLocaleString()}).`,
           className: "bg-black border-accent text-accent",
         });
       },

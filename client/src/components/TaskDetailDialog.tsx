@@ -7,12 +7,7 @@ import { cn } from "@/lib/utils";
 import { Clock, Target, Zap, Calendar, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 
-interface ScoreBreakdown {
-  deadline: number;
-  context: number;
-  energy: number;
-  preference: number;
-}
+type ScoreBreakdown = Record<string, number>;
 
 interface Mission {
   id: string;
@@ -67,16 +62,30 @@ export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange, 
     'FAILED': 'text-destructive border-destructive/50 bg-destructive/10',
   };
 
-  // Safely extract score breakdown with defaults
-  const scoreBreakdown = {
-    deadline: Number(mission.score_breakdown?.deadline) || 0,
-    context: Number(mission.score_breakdown?.context) || 0,
-    energy: Number(mission.score_breakdown?.energy) || 0,
-    preference: Number(mission.score_breakdown?.preference) || 0,
-  };
+  const rawBreakdown = (mission.score_breakdown || {}) as Record<string, unknown>;
+  const breakdown: Record<string, number> = Object.fromEntries(
+    Object.entries(rawBreakdown)
+      .filter(([, v]) => typeof v === "number" && Number.isFinite(v))
+      .map(([k, v]) => [k, v as number])
+  );
 
-  const totalScore = Number(mission.priority_score) || 
-    (scoreBreakdown.deadline + scoreBreakdown.context + scoreBreakdown.energy + scoreBreakdown.preference) || 0;
+  const totalScore = Number(mission.priority_score) ||
+    Object.values(breakdown).reduce((sum, v) => sum + v, 0) || 0;
+
+  const breakdownLooksFractional = (() => {
+    const values = Object.values(breakdown);
+    if (values.length === 0) return true;
+    return values.every((v) => v >= 0 && v <= 1.5);
+  })();
+
+  const scoreItems: Array<{ key: string; label: string; icon: any; color: string }> = [
+    { key: "base", label: "Base Score", icon: Target, color: "text-primary" },
+    { key: "deadline", label: "Deadline Urgency", icon: Clock, color: "text-red-400" },
+    { key: "context", label: "Context Relevance", icon: Target, color: "text-blue-400" },
+    { key: "energy", label: "Energy Level", icon: Zap, color: "text-yellow-400" },
+    { key: "preference", label: "User Preference", icon: Calendar, color: "text-green-400" },
+    { key: "routine", label: "Routine Match", icon: Zap, color: "text-secondary" },
+  ];
 
   const handleStatusChange = (newStatus: string) => {
     if (onStatusChange) {
@@ -131,10 +140,19 @@ export function TaskDetailDialog({ mission, open, onOpenChange, onStatusChange, 
               <Separator className="bg-primary/20" />
 
               <div className="space-y-3">
-                <ScoreBar label="Deadline Urgency" icon={Clock} value={scoreBreakdown.deadline} color="text-red-400" />
-                <ScoreBar label="Context Relevance" icon={Target} value={scoreBreakdown.context} color="text-blue-400" />
-                <ScoreBar label="Energy Level" icon={Zap} value={scoreBreakdown.energy} color="text-yellow-400" />
-                <ScoreBar label="User Preference" icon={Calendar} value={scoreBreakdown.preference} color="text-green-400" />
+                {scoreItems
+                  .filter((item) => typeof breakdown[item.key] === "number")
+                  .map((item) => (
+                    <ScoreBar
+                      key={item.key}
+                      label={item.label}
+                      icon={item.icon}
+                      value={breakdown[item.key]}
+                      total={totalScore}
+                      fractional={breakdownLooksFractional}
+                      color={item.color}
+                    />
+                  ))}
               </div>
             </div>
           </div>
@@ -272,13 +290,18 @@ interface ScoreBarProps {
   label: string;
   icon: React.ElementType;
   value: number;
+  total: number;
+  fractional: boolean;
   color: string;
 }
 
-function ScoreBar({ label, icon: Icon, value, color }: ScoreBarProps) {
+function ScoreBar({ label, icon: Icon, value, total, fractional, color }: ScoreBarProps) {
   // Safely handle undefined/NaN values
   const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
-  const percentage = (safeValue * 100).toFixed(0);
+  const pct = fractional
+    ? safeValue * 100
+    : (total > 0 ? (safeValue / total) * 100 : 0);
+  const percentage = pct.toFixed(0);
   
   return (
     <div className="space-y-1">
@@ -292,7 +315,7 @@ function ScoreBar({ label, icon: Icon, value, color }: ScoreBarProps) {
         </span>
       </div>
       <Progress 
-        value={safeValue * 100} 
+        value={pct} 
         className="h-2 bg-white/5"
         indicatorClassName={cn("transition-all", color.replace('text-', 'bg-'))}
       />

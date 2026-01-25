@@ -41,8 +41,8 @@ def _load_from_db() -> None:
     try:
         conn = get_db()
         cursor = conn.execute("""
-            SELECT id, title, priority, status, tags, why, due_at, completed_at,
-                   created_at, updated_at, evidence, priority_score, score_breakdown, reasons
+             SELECT id, title, priority, status, tags, category, why, due_at, completed_at,
+                 created_at, updated_at, evidence, actions, priority_score, score_breakdown, reasons
             FROM missions
             ORDER BY created_at DESC
         """)
@@ -54,12 +54,14 @@ def _load_from_db() -> None:
                 "priority": row["priority"],
                 "status": row["status"],
                 "tags": json.loads(row["tags"]) if row["tags"] else [],
+                "category": (row["category"] or "") if "category" in row.keys() else "",
                 "why": row["why"] or "",
                 "due_at": row["due_at"],
                 "completed_at": row["completed_at"],
                 "created_at": row["created_at"],
                 "updated_at": row["updated_at"],
                 "evidence": json.loads(row["evidence"]) if row["evidence"] else {},
+                "actions": json.loads(row["actions"]) if row["actions"] else [],
                 "priority_score": row["priority_score"] or 0.0,
                 "score_breakdown": json.loads(row["score_breakdown"]) if row["score_breakdown"] else {},
                 "reasons": json.loads(row["reasons"]) if row["reasons"] else [],
@@ -90,21 +92,23 @@ def store_mission(mission: dict[str, Any]) -> None:
         conn = get_db()
         conn.execute("""
             INSERT OR REPLACE INTO missions 
-            (id, title, priority, status, tags, why, due_at, completed_at,
-             created_at, updated_at, evidence, priority_score, score_breakdown, reasons)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, title, priority, status, tags, category, why, due_at, completed_at,
+             created_at, updated_at, evidence, actions, priority_score, score_breakdown, reasons)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             mission_id,
             mission.get("title", ""),
             mission.get("priority", "P3"),
             mission.get("status", "open"),
             json.dumps(mission.get("tags", [])),
+            mission.get("category", "") or "",
             mission.get("why", ""),
             mission.get("due_at"),
             mission.get("completed_at"),
             mission.get("created_at", datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")),
             mission.get("updated_at", datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")),
             json.dumps(mission.get("evidence", {})),
+            json.dumps(mission.get("actions", [])),
             mission.get("priority_score", 0.0),
             json.dumps(mission.get("score_breakdown", {})),
             json.dumps(mission.get("reasons", [])),

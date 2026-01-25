@@ -77,6 +77,16 @@ def init_db(db_path: Optional[str] = None) -> sqlite3.Connection:
     # Create tables
     conn.executescript(SQL_SCHEMA)
     conn.commit()
+
+    # Lightweight migrations (add missing columns)
+    try:
+        cols = {row["name"] for row in conn.execute("PRAGMA table_info(missions)").fetchall()}
+        if "category" not in cols:
+            conn.execute("ALTER TABLE missions ADD COLUMN category TEXT DEFAULT ''")
+            conn.commit()
+    except Exception:
+        # Best-effort migration; avoid breaking startup
+        pass
     
     if path == ":memory:":
         _memory_connection = conn
