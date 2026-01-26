@@ -1,0 +1,5 @@
+﻿*.bak_*
+requirements.txt.bak_*
+context_snapshot.json
+Remove-Item
+cd
