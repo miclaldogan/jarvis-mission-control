@@ -1,4 +1,4 @@
-# jarvis-mission-control
+# jarvis-mission-control - (IT'S JUST A DEMO AND NEEDS DEVELOPMENT)
 
 **Mission Control:** Intelligent task management system with context ingestion → mission generation → daily prioritization → performance reports.
 
